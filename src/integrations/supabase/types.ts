@@ -14,6 +14,51 @@ export type Database = {
   }
   public: {
     Tables: {
+      bookings: {
+        Row: {
+          created_at: string
+          id: string
+          passenger_id: string
+          ride_id: string
+          seats_booked: number
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          passenger_id: string
+          ride_id: string
+          seats_booked?: number
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          passenger_id?: string
+          ride_id?: string
+          seats_booked?: number
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bookings_passenger_id_fkey"
+            columns: ["passenger_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookings_ride_id_fkey"
+            columns: ["ride_id"]
+            isOneToOne: false
+            referencedRelation: "rides"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
@@ -34,6 +79,59 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      rides: {
+        Row: {
+          available_seats: number
+          created_at: string
+          departure_date: string
+          departure_time: string
+          description: string | null
+          destination: string
+          driver_id: string
+          id: string
+          origin: string
+          price_per_seat: number
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          available_seats: number
+          created_at?: string
+          departure_date: string
+          departure_time: string
+          description?: string | null
+          destination: string
+          driver_id: string
+          id?: string
+          origin: string
+          price_per_seat: number
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          available_seats?: number
+          created_at?: string
+          departure_date?: string
+          departure_time?: string
+          description?: string | null
+          destination?: string
+          driver_id?: string
+          id?: string
+          origin?: string
+          price_per_seat?: number
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rides_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
