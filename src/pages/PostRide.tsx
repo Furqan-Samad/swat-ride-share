@@ -1,14 +1,21 @@
-import { useState } from "react";
-import { MapPin, Calendar, Users, DollarSign } from "lucide-react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { MapPin, Calendar, Users, DollarSign, Loader2 } from "lucide-react";
 import Header from "@/components/Header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import { useCreateRide } from "@/hooks/useRides";
 
 const PostRide = () => {
+  const navigate = useNavigate();
   const { toast } = useToast();
+  const { user, loading: authLoading } = useAuth();
+  const createRide = useCreateRide();
+
   const [from, setFrom] = useState("Swat");
   const [to, setTo] = useState("");
   const [date, setDate] = useState("");
@@ -17,7 +24,19 @@ const PostRide = () => {
   const [price, setPrice] = useState("");
   const [description, setDescription] = useState("");
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Redirect to auth if not logged in
+  useEffect(() => {
+    if (!authLoading && !user) {
+      toast({
+        title: "Sign in required",
+        description: "Please sign in to post a ride",
+        variant: "destructive",
+      });
+      navigate("/auth");
+    }
+  }, [user, authLoading, navigate, toast]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     // Basic validation
@@ -30,12 +49,26 @@ const PostRide = () => {
       return;
     }
 
-    // Would send to backend here
-    toast({
-      title: "Ride Posted!",
-      description: "Your ride has been published successfully",
+    await createRide.mutateAsync({
+      origin: from,
+      destination: to,
+      departure_date: date,
+      departure_time: time,
+      available_seats: parseInt(seats),
+      price_per_seat: parseInt(price),
+      description: description || undefined,
     });
+
+    navigate("/search");
   };
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -137,8 +170,13 @@ const PostRide = () => {
                 type="submit" 
                 size="lg" 
                 className="w-full bg-gradient-hero hover:opacity-90 transition-opacity"
+                disabled={createRide.isPending}
               >
-                Publish Ride
+                {createRide.isPending ? (
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                ) : (
+                  "Publish Ride"
+                )}
               </Button>
             </form>
           </CardContent>
