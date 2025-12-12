@@ -1,37 +1,84 @@
-import { useParams, Link } from "react-router-dom";
-import { MapPin, Calendar, Users, Star, Phone, MessageCircle } from "lucide-react";
+import { useParams, Link, useNavigate } from "react-router-dom";
+import { MapPin, Calendar, Users, Star, Phone, MessageCircle, Loader2 } from "lucide-react";
 import Header from "@/components/Header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { useRide, useCreateBooking } from "@/hooks/useRides";
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
+import { format } from "date-fns";
 
 const RideDetails = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const { data: ride, isLoading, error } = useRide(id || "");
+  const createBooking = useCreateBooking();
 
-  // Mock data - will be replaced with real data
-  const ride = {
-    id: id,
-    from: "Swat",
-    to: "Islamabad",
-    date: "Dec 2, 2025",
-    time: "08:00 AM",
-    price: 1500,
-    seats: 3,
-    description: "Comfortable ride in Toyota Corolla. Leaving early morning to avoid traffic. Will make one stop for breakfast.",
-    driver: {
-      name: "Ahmed Khan",
-      rating: 4.8,
-      trips: 45,
-      avatar: "",
-      phone: "+92 300 1234567",
-      verified: true,
-    },
-    pickupPoints: [
-      "Mingora Main Chowk",
-      "Saidu Sharif Hospital",
-      "Motorway Entrance",
-    ],
+  const formatDate = (dateStr: string) => {
+    try {
+      return format(new Date(dateStr), "MMM d, yyyy");
+    } catch {
+      return dateStr;
+    }
   };
+
+  const formatTime = (timeStr: string) => {
+    try {
+      const [hours, minutes] = timeStr.split(":");
+      const date = new Date();
+      date.setHours(parseInt(hours), parseInt(minutes));
+      return format(date, "hh:mm a");
+    } catch {
+      return timeStr;
+    }
+  };
+
+  const handleBookRide = async () => {
+    if (!user) {
+      toast({
+        title: "Sign in required",
+        description: "Please sign in to book a ride",
+        variant: "destructive",
+      });
+      navigate("/auth");
+      return;
+    }
+
+    if (!id) return;
+
+    await createBooking.mutateAsync({ rideId: id, seats: 1 });
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !ride) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="container py-12 px-4 text-center">
+          <h1 className="text-2xl font-bold mb-4">Ride not found</h1>
+          <p className="text-muted-foreground mb-6">This ride may have been cancelled or doesn't exist.</p>
+          <Link to="/search">
+            <Button>Back to Search</Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  const driverPhone = ride.profiles?.phone_number || "Driver";
 
   return (
     <div className="min-h-screen bg-background">
@@ -51,7 +98,7 @@ const RideDetails = () => {
                   <div className="flex-1">
                     <div className="flex items-center space-x-2 text-lg mb-2">
                       <MapPin className="h-5 w-5 text-primary" />
-                      <span className="font-semibold">{ride.from}</span>
+                      <span className="font-semibold">{ride.origin}</span>
                     </div>
                     <div className="flex items-center space-x-3 my-4 ml-2">
                       <div className="h-12 w-1 bg-primary rounded-full" />
@@ -60,12 +107,12 @@ const RideDetails = () => {
                     </div>
                     <div className="flex items-center space-x-2 text-lg">
                       <MapPin className="h-5 w-5 text-accent" />
-                      <span className="font-semibold">{ride.to}</span>
+                      <span className="font-semibold">{ride.destination}</span>
                     </div>
                   </div>
 
                   <div className="text-right">
-                    <div className="text-4xl font-bold text-primary">₨{ride.price}</div>
+                    <div className="text-4xl font-bold text-primary">₨{ride.price_per_seat}</div>
                     <div className="text-sm text-muted-foreground">per seat</div>
                   </div>
                 </div>
@@ -73,30 +120,20 @@ const RideDetails = () => {
                 <div className="space-y-3 py-4 border-y border-border">
                   <div className="flex items-center space-x-2 text-muted-foreground">
                     <Calendar className="h-5 w-5" />
-                    <span>{ride.date} at {ride.time}</span>
+                    <span>{formatDate(ride.departure_date)} at {formatTime(ride.departure_time)}</span>
                   </div>
                   <div className="flex items-center space-x-2 text-muted-foreground">
                     <Users className="h-5 w-5" />
-                    <span>{ride.seats} seats available</span>
+                    <span>{ride.available_seats} seats available</span>
                   </div>
                 </div>
 
-                <div className="mt-6">
-                  <h3 className="font-semibold mb-2">Trip Description</h3>
-                  <p className="text-muted-foreground">{ride.description}</p>
-                </div>
-
-                <div className="mt-6">
-                  <h3 className="font-semibold mb-3">Pickup Points</h3>
-                  <ul className="space-y-2">
-                    {ride.pickupPoints.map((point, index) => (
-                      <li key={index} className="flex items-center space-x-2 text-muted-foreground">
-                        <div className="h-2 w-2 rounded-full bg-primary" />
-                        <span>{point}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+                {ride.description && (
+                  <div className="mt-6">
+                    <h3 className="font-semibold mb-2">Trip Description</h3>
+                    <p className="text-muted-foreground">{ride.description}</p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
@@ -107,41 +144,56 @@ const RideDetails = () => {
               <CardContent className="p-6">
                 <div className="text-center mb-4">
                   <Avatar className="h-24 w-24 mx-auto mb-3">
-                    <AvatarImage src={ride.driver.avatar} />
-                    <AvatarFallback className="text-2xl">{ride.driver.name.charAt(0)}</AvatarFallback>
+                    <AvatarFallback className="text-2xl bg-primary/10 text-primary">
+                      {driverPhone.slice(-2)}
+                    </AvatarFallback>
                   </Avatar>
-                  <h3 className="font-semibold text-lg">{ride.driver.name}</h3>
-                  {ride.driver.verified && (
-                    <span className="inline-block mt-1 text-xs bg-primary/10 text-primary px-2 py-1 rounded-full">
-                      ✓ Verified
-                    </span>
-                  )}
+                  <h3 className="font-semibold text-lg">{driverPhone}</h3>
+                  <span className="inline-block mt-1 text-xs bg-primary/10 text-primary px-2 py-1 rounded-full">
+                    ✓ Verified
+                  </span>
                 </div>
 
                 <div className="flex items-center justify-center space-x-6 py-4 border-y border-border">
                   <div className="text-center">
                     <div className="flex items-center space-x-1 text-lg font-semibold">
                       <Star className="h-5 w-5 text-yellow-500 fill-yellow-500" />
-                      <span>{ride.driver.rating}</span>
+                      <span>4.8</span>
                     </div>
                     <div className="text-xs text-muted-foreground">Rating</div>
                   </div>
                   <div className="h-8 w-px bg-border" />
                   <div className="text-center">
-                    <div className="text-lg font-semibold">{ride.driver.trips}</div>
-                    <div className="text-xs text-muted-foreground">Trips</div>
+                    <div className="text-lg font-semibold">New</div>
+                    <div className="text-xs text-muted-foreground">Driver</div>
                   </div>
                 </div>
 
                 <div className="mt-6 space-y-3">
-                  <Button className="w-full bg-gradient-hero hover:opacity-90 transition-opacity">
-                    <MessageCircle className="mr-2 h-4 w-4" />
-                    Book Ride
+                  <Button 
+                    className="w-full bg-gradient-hero hover:opacity-90 transition-opacity"
+                    onClick={handleBookRide}
+                    disabled={createBooking.isPending}
+                  >
+                    {createBooking.isPending ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <>
+                        <MessageCircle className="mr-2 h-4 w-4" />
+                        Book Ride
+                      </>
+                    )}
                   </Button>
-                  <Button variant="outline" className="w-full">
-                    <Phone className="mr-2 h-4 w-4" />
-                    Contact Driver
-                  </Button>
+                  {ride.profiles?.phone_number && (
+                    <Button 
+                      variant="outline" 
+                      className="w-full"
+                      onClick={() => window.open(`tel:${ride.profiles?.phone_number}`, "_self")}
+                    >
+                      <Phone className="mr-2 h-4 w-4" />
+                      Contact Driver
+                    </Button>
+                  )}
                 </div>
               </CardContent>
             </Card>

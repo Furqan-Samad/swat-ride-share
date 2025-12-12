@@ -1,69 +1,43 @@
 import { useState } from "react";
-import { Search } from "lucide-react";
+import { Search, Loader2 } from "lucide-react";
 import Header from "@/components/Header";
 import RideCard from "@/components/RideCard";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-
-// Mock data - will be replaced with real data later
-const mockRides = [
-  {
-    id: "1",
-    from: "Swat",
-    to: "Islamabad",
-    date: "Dec 2, 2025",
-    time: "08:00 AM",
-    price: 1500,
-    seats: 3,
-    driver: {
-      name: "Ahmed Khan",
-      rating: 4.8,
-    },
-  },
-  {
-    id: "2",
-    from: "Swat",
-    to: "Peshawar",
-    date: "Dec 2, 2025",
-    time: "10:30 AM",
-    price: 800,
-    seats: 2,
-    driver: {
-      name: "Bilal Shah",
-      rating: 4.9,
-    },
-  },
-  {
-    id: "3",
-    from: "Swat",
-    to: "Lahore",
-    date: "Dec 3, 2025",
-    time: "06:00 AM",
-    price: 2500,
-    seats: 4,
-    driver: {
-      name: "Usman Ali",
-      rating: 4.7,
-    },
-  },
-  {
-    id: "4",
-    from: "Swat",
-    to: "Islamabad",
-    date: "Dec 3, 2025",
-    time: "02:00 PM",
-    price: 1600,
-    seats: 2,
-    driver: {
-      name: "Zain Malik",
-      rating: 4.9,
-    },
-  },
-];
+import { useRides } from "@/hooks/useRides";
+import { format } from "date-fns";
 
 const SearchRides = () => {
   const [from, setFrom] = useState("Swat");
   const [to, setTo] = useState("");
+  const [searchFrom, setSearchFrom] = useState("Swat");
+  const [searchTo, setSearchTo] = useState("");
+
+  const { data: rides, isLoading, error } = useRides(searchFrom, searchTo);
+
+  const handleSearch = () => {
+    setSearchFrom(from);
+    setSearchTo(to);
+  };
+
+  const formatDate = (dateStr: string) => {
+    try {
+      return format(new Date(dateStr), "MMM d, yyyy");
+    } catch {
+      return dateStr;
+    }
+  };
+
+  const formatTime = (timeStr: string) => {
+    try {
+      const [hours, minutes] = timeStr.split(":");
+      const date = new Date();
+      date.setHours(parseInt(hours), parseInt(minutes));
+      return format(date, "hh:mm a");
+    } catch {
+      return timeStr;
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -93,24 +67,59 @@ const SearchRides = () => {
                 className="pl-10"
               />
             </div>
-            <Button className="bg-gradient-hero hover:opacity-90 transition-opacity">
+            <Button 
+              onClick={handleSearch}
+              className="bg-gradient-hero hover:opacity-90 transition-opacity"
+            >
               Search
             </Button>
           </div>
         </div>
 
         {/* Results */}
-        <div className="mb-4 flex items-center justify-between">
-          <p className="text-muted-foreground">
-            {mockRides.length} rides available
-          </p>
-        </div>
+        {isLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
+        ) : error ? (
+          <div className="text-center py-12">
+            <p className="text-destructive">Failed to load rides. Please try again.</p>
+          </div>
+        ) : (
+          <>
+            <div className="mb-4 flex items-center justify-between">
+              <p className="text-muted-foreground">
+                {rides?.length || 0} rides available
+              </p>
+            </div>
 
-        <div className="grid gap-6 md:grid-cols-2">
-          {mockRides.map((ride) => (
-            <RideCard key={ride.id} {...ride} />
-          ))}
-        </div>
+            {rides && rides.length > 0 ? (
+              <div className="grid gap-6 md:grid-cols-2">
+                {rides.map((ride) => (
+                  <RideCard 
+                    key={ride.id}
+                    id={ride.id}
+                    from={ride.origin}
+                    to={ride.destination}
+                    date={formatDate(ride.departure_date)}
+                    time={formatTime(ride.departure_time)}
+                    price={ride.price_per_seat}
+                    seats={ride.available_seats}
+                    driver={{
+                      name: ride.profiles?.phone_number || "Driver",
+                      rating: 4.8,
+                    }}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12 bg-muted/30 rounded-2xl">
+                <p className="text-muted-foreground mb-4">No rides found for this route.</p>
+                <p className="text-sm text-muted-foreground">Try different locations or check back later.</p>
+              </div>
+            )}
+          </>
+        )}
       </div>
     </div>
   );
