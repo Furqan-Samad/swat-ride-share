@@ -1,4 +1,4 @@
-import { Car, LogOut, User, Menu } from "lucide-react";
+import { Car, LogOut, User, Menu, Ticket, CarFront } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "./ui/button";
 import { useAuth } from "@/hooks/useAuth";
@@ -6,6 +6,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "./ui/avatar";
@@ -17,6 +18,14 @@ const Header = () => {
   const handleSignOut = async () => {
     await signOut();
     navigate("/");
+  };
+
+  const getUserInitials = () => {
+    const name = user?.user_metadata?.full_name;
+    if (name) {
+      return name.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2);
+    }
+    return user?.email?.slice(0, 2).toUpperCase() || "U";
   };
 
   return (
@@ -46,16 +55,31 @@ const Header = () => {
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative h-10 w-10 rounded-full">
                   <Avatar className="h-10 w-10">
-                    <AvatarFallback className="bg-primary/10 text-primary">
-                      {user.phone?.slice(-2) || <User className="h-4 w-4" />}
+                    <AvatarFallback className="bg-primary/10 text-primary font-medium">
+                      {getUserInitials()}
                     </AvatarFallback>
                   </Avatar>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuItem className="text-muted-foreground">
-                  {user.phone || "My Account"}
+                <DropdownMenuItem className="text-muted-foreground font-medium">
+                  <User className="mr-2 h-4 w-4" />
+                  {user.user_metadata?.full_name || user.email || "My Account"}
                 </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link to="/my-rides" className="flex items-center">
+                    <CarFront className="mr-2 h-4 w-4" />
+                    My Rides
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link to="/my-bookings" className="flex items-center">
+                    <Ticket className="mr-2 h-4 w-4" />
+                    My Bookings
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleSignOut}>
                   <LogOut className="mr-2 h-4 w-4" />
                   Sign Out
@@ -91,6 +115,17 @@ const Header = () => {
               <DropdownMenuItem asChild>
                 <Link to="/post-ride">Offer Ride</Link>
               </DropdownMenuItem>
+              {user && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <Link to="/my-rides">My Rides</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/my-bookings">My Bookings</Link>
+                  </DropdownMenuItem>
+                </>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>

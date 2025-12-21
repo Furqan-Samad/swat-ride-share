@@ -62,20 +62,29 @@ export type Database = {
       profiles: {
         Row: {
           created_at: string
+          full_name: string | null
           id: string
+          is_driver: boolean | null
           phone_number: string | null
+          profile_completed: boolean | null
           updated_at: string
         }
         Insert: {
           created_at?: string
+          full_name?: string | null
           id: string
+          is_driver?: boolean | null
           phone_number?: string | null
+          profile_completed?: boolean | null
           updated_at?: string
         }
         Update: {
           created_at?: string
+          full_name?: string | null
           id?: string
+          is_driver?: boolean | null
           phone_number?: string | null
+          profile_completed?: boolean | null
           updated_at?: string
         }
         Relationships: []
@@ -128,6 +137,56 @@ export type Database = {
             foreignKeyName: "rides_driver_id_fkey"
             columns: ["driver_id"]
             isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vehicles: {
+        Row: {
+          created_at: string | null
+          driver_id: string
+          id: string
+          license_plate: string
+          seats_available: number | null
+          updated_at: string | null
+          vehicle_color: string
+          vehicle_make: string
+          vehicle_model: string
+          vehicle_type: string
+          vehicle_year: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          driver_id: string
+          id?: string
+          license_plate: string
+          seats_available?: number | null
+          updated_at?: string | null
+          vehicle_color: string
+          vehicle_make: string
+          vehicle_model: string
+          vehicle_type: string
+          vehicle_year?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          driver_id?: string
+          id?: string
+          license_plate?: string
+          seats_available?: number | null
+          updated_at?: string | null
+          vehicle_color?: string
+          vehicle_make?: string
+          vehicle_model?: string
+          vehicle_type?: string
+          vehicle_year?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vehicles_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: true
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
