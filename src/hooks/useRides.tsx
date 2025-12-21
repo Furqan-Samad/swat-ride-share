@@ -14,9 +14,20 @@ export interface Ride {
   description: string | null;
   status: string;
   created_at: string;
-  profiles?: {
-    id: string;
-    phone_number: string | null;
+}
+
+export interface Booking {
+  id: string;
+  ride_id: string;
+  passenger_id: string;
+  seats_booked: number;
+  status: string;
+  created_at: string;
+  rides?: Ride & {
+    profiles?: {
+      full_name: string | null;
+      phone_number: string | null;
+    };
   };
 }
 
@@ -26,13 +37,7 @@ export const useRides = (from?: string, to?: string) => {
     queryFn: async () => {
       let query = supabase
         .from("rides")
-        .select(`
-          *,
-          profiles:driver_id (
-            id,
-            phone_number
-          )
-        `)
+        .select("*")
         .eq("status", "active")
         .order("departure_date", { ascending: true });
 
@@ -44,7 +49,6 @@ export const useRides = (from?: string, to?: string) => {
       }
 
       const { data, error } = await query;
-      
       if (error) throw error;
       return data as Ride[];
     },
@@ -57,13 +61,7 @@ export const useRide = (id: string) => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("rides")
-        .select(`
-          *,
-          profiles:driver_id (
-            id,
-            phone_number
-          )
-        `)
+        .select("*")
         .eq("id", id)
         .maybeSingle();
       
@@ -71,6 +69,44 @@ export const useRide = (id: string) => {
       return data as Ride | null;
     },
     enabled: !!id,
+  });
+};
+
+export const useMyRides = () => {
+  return useQuery({
+    queryKey: ["myRides"],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      const { data, error } = await supabase
+        .from("rides")
+        .select("*")
+        .eq("driver_id", user.id)
+        .order("departure_date", { ascending: false });
+      
+      if (error) throw error;
+      return data as Ride[];
+    },
+  });
+};
+
+export const useMyBookings = () => {
+  return useQuery({
+    queryKey: ["myBookings"],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      const { data, error } = await supabase
+        .from("bookings")
+        .select(`*, rides:ride_id (*)`)
+        .eq("passenger_id", user.id)
+        .order("created_at", { ascending: false });
+      
+      if (error) throw error;
+      return data as Booking[];
+    },
   });
 };
 
@@ -89,17 +125,11 @@ export const useCreateRide = () => {
       description?: string;
     }) => {
       const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        throw new Error("You must be logged in to post a ride");
-      }
+      if (!user) throw new Error("You must be logged in to post a ride");
 
       const { data, error } = await supabase
         .from("rides")
-        .insert({
-          ...ride,
-          driver_id: user.id,
-        })
+        .insert({ ...ride, driver_id: user.id })
         .select()
         .single();
       
@@ -108,17 +138,11 @@ export const useCreateRide = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["rides"] });
-      toast({
-        title: "Ride Posted!",
-        description: "Your ride has been published successfully",
-      });
+      queryClient.invalidateQueries({ queryKey: ["myRides"] });
+      toast({ title: "Ride Posted!", description: "Your ride has been published" });
     },
     onError: (error: Error) => {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: error.message, variant: "destructive" });
     },
   });
 };
@@ -130,18 +154,11 @@ export const useCreateBooking = () => {
   return useMutation({
     mutationFn: async ({ rideId, seats }: { rideId: string; seats: number }) => {
       const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        throw new Error("You must be logged in to book a ride");
-      }
+      if (!user) throw new Error("You must be logged in to book a ride");
 
       const { data, error } = await supabase
         .from("bookings")
-        .insert({
-          ride_id: rideId,
-          passenger_id: user.id,
-          seats_booked: seats,
-        })
+        .insert({ ride_id: rideId, passenger_id: user.id, seats_booked: seats })
         .select()
         .single();
       
@@ -150,18 +167,11 @@ export const useCreateBooking = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["rides"] });
-      queryClient.invalidateQueries({ queryKey: ["bookings"] });
-      toast({
-        title: "Booking Requested!",
-        description: "The driver will be notified of your booking request",
-      });
+      queryClient.invalidateQueries({ queryKey: ["myBookings"] });
+      toast({ title: "Booking Requested!", description: "The driver will be notified" });
     },
     onError: (error: Error) => {
-      toast({
-        title: "Booking Failed",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast({ title: "Booking Failed", description: error.message, variant: "destructive" });
     },
   });
 };

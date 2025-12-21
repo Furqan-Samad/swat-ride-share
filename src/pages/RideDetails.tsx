@@ -78,7 +78,7 @@ const RideDetails = () => {
     );
   }
 
-  const driverPhone = ride.profiles?.phone_number || "Driver";
+  const driverName = "Driver";
 
   return (
     <div className="min-h-screen bg-background">
@@ -145,10 +145,10 @@ const RideDetails = () => {
                 <div className="text-center mb-4">
                   <Avatar className="h-24 w-24 mx-auto mb-3">
                     <AvatarFallback className="text-2xl bg-primary/10 text-primary">
-                      {driverPhone.slice(-2)}
+                      DR
                     </AvatarFallback>
                   </Avatar>
-                  <h3 className="font-semibold text-lg">{driverPhone}</h3>
+                  <h3 className="font-semibold text-lg">{driverName}</h3>
                   <span className="inline-block mt-1 text-xs bg-primary/10 text-primary px-2 py-1 rounded-full">
                     ✓ Verified
                   </span>
@@ -184,16 +184,10 @@ const RideDetails = () => {
                       </>
                     )}
                   </Button>
-                  {ride.profiles?.phone_number && (
-                    <Button 
-                      variant="outline" 
-                      className="w-full"
-                      onClick={() => window.open(`tel:${ride.profiles?.phone_number}`, "_self")}
-                    >
-                      <Phone className="mr-2 h-4 w-4" />
-                      Contact Driver
-                    </Button>
-                  )}
+                  <Button variant="outline" className="w-full" disabled>
+                    <Phone className="mr-2 h-4 w-4" />
+                    Contact After Booking
+                  </Button>
                 </div>
               </CardContent>
             </Card>

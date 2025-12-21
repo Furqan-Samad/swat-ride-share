@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Phone, ArrowRight, Loader2 } from "lucide-react";
+import { Mail, Lock, User, ArrowRight, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -14,42 +14,34 @@ const Auth = () => {
   const { toast } = useToast();
   const { user, loading: authLoading } = useAuth();
   
-  const [phone, setPhone] = useState("");
-  const [otp, setOtp] = useState("");
-  const [step, setStep] = useState<"phone" | "otp">("phone");
+  const [isSignUp, setIsSignUp] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [fullName, setFullName] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Redirect if already logged in
   useEffect(() => {
     if (!authLoading && user) {
-      navigate("/");
+      navigate("/profile-setup");
     }
   }, [user, authLoading, navigate]);
 
-  const formatPhoneNumber = (phone: string) => {
-    // Remove all non-digits
-    let cleaned = phone.replace(/\D/g, "");
-    
-    // If starts with 0, replace with +92
-    if (cleaned.startsWith("0")) {
-      cleaned = "92" + cleaned.slice(1);
-    }
-    
-    // If doesn't start with country code, assume Pakistan
-    if (!cleaned.startsWith("92")) {
-      cleaned = "92" + cleaned;
-    }
-    
-    return "+" + cleaned;
-  };
-
-  const handleSendOtp = async (e: React.FormEvent) => {
+  const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!phone || phone.length < 10) {
+    if (!email || !password || !fullName) {
       toast({
-        title: "Invalid phone number",
-        description: "Please enter a valid phone number",
+        title: "Missing Information",
+        description: "Please fill in all fields",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (password.length < 6) {
+      toast({
+        title: "Weak Password",
+        description: "Password must be at least 6 characters",
         variant: "destructive",
       });
       return;
@@ -57,57 +49,21 @@ const Auth = () => {
 
     setLoading(true);
     
-    const formattedPhone = formatPhoneNumber(phone);
-    
-    const { error } = await supabase.auth.signInWithOtp({
-      phone: formattedPhone,
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          full_name: fullName,
+        },
+      },
     });
 
     setLoading(false);
 
     if (error) {
       toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-      return;
-    }
-
-    toast({
-      title: "OTP Sent",
-      description: "Please check your phone for the verification code",
-    });
-    setStep("otp");
-  };
-
-  const handleVerifyOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!otp || otp.length !== 6) {
-      toast({
-        title: "Invalid OTP",
-        description: "Please enter the 6-digit verification code",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setLoading(true);
-    
-    const formattedPhone = formatPhoneNumber(phone);
-    
-    const { error } = await supabase.auth.verifyOtp({
-      phone: formattedPhone,
-      token: otp,
-      type: "sms",
-    });
-
-    setLoading(false);
-
-    if (error) {
-      toast({
-        title: "Verification failed",
+        title: "Sign Up Failed",
         description: error.message,
         variant: "destructive",
       });
@@ -116,6 +72,44 @@ const Auth = () => {
 
     toast({
       title: "Welcome to SwatPool!",
+      description: "Your account has been created successfully",
+    });
+    
+    navigate("/profile-setup");
+  };
+
+  const handleSignIn = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!email || !password) {
+      toast({
+        title: "Missing Information",
+        description: "Please enter email and password",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setLoading(true);
+    
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    setLoading(false);
+
+    if (error) {
+      toast({
+        title: "Sign In Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    toast({
+      title: "Welcome back!",
       description: "You have successfully signed in",
     });
     
@@ -138,85 +132,87 @@ const Auth = () => {
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
             <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-hero">
-              <Phone className="h-8 w-8 text-primary-foreground" />
+              <Mail className="h-8 w-8 text-primary-foreground" />
             </div>
             <CardTitle className="text-2xl">
-              {step === "phone" ? "Sign in to SwatPool" : "Enter Verification Code"}
+              {isSignUp ? "Create Account" : "Welcome Back"}
             </CardTitle>
             <CardDescription>
-              {step === "phone" 
-                ? "Enter your phone number to receive a verification code" 
-                : `We sent a 6-digit code to ${formatPhoneNumber(phone)}`}
+              {isSignUp 
+                ? "Join SwatPool to share rides and travel smart" 
+                : "Sign in to your SwatPool account"}
             </CardDescription>
           </CardHeader>
           
           <CardContent>
-            {step === "phone" ? (
-              <form onSubmit={handleSendOtp} className="space-y-4">
+            <form onSubmit={isSignUp ? handleSignUp : handleSignIn} className="space-y-4">
+              {isSignUp && (
                 <div className="relative">
-                  <Phone className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
+                  <User className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
                   <Input
-                    type="tel"
-                    placeholder="03XX XXXXXXX"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    className="pl-10 h-12 text-lg"
+                    type="text"
+                    placeholder="Full Name"
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    className="pl-10 h-12"
                     disabled={loading}
                   />
                 </div>
-                
-                <Button 
-                  type="submit" 
-                  size="lg" 
-                  className="w-full h-12 bg-gradient-hero hover:opacity-90 transition-opacity"
-                  disabled={loading}
-                >
-                  {loading ? (
-                    <Loader2 className="h-5 w-5 animate-spin" />
-                  ) : (
-                    <>
-                      Continue
-                      <ArrowRight className="ml-2 h-5 w-5" />
-                    </>
-                  )}
-                </Button>
-              </form>
-            ) : (
-              <form onSubmit={handleVerifyOtp} className="space-y-4">
+              )}
+              
+              <div className="relative">
+                <Mail className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
                 <Input
-                  type="text"
-                  placeholder="Enter 6-digit code"
-                  value={otp}
-                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                  className="h-12 text-lg text-center tracking-widest font-mono"
-                  maxLength={6}
+                  type="email"
+                  placeholder="Email Address"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="pl-10 h-12"
                   disabled={loading}
                 />
-                
-                <Button 
-                  type="submit" 
-                  size="lg" 
-                  className="w-full h-12 bg-gradient-hero hover:opacity-90 transition-opacity"
+              </div>
+              
+              <div className="relative">
+                <Lock className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
+                <Input
+                  type="password"
+                  placeholder="Password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="pl-10 h-12"
                   disabled={loading}
-                >
-                  {loading ? (
-                    <Loader2 className="h-5 w-5 animate-spin" />
-                  ) : (
-                    "Verify & Sign In"
-                  )}
-                </Button>
-                
-                <Button 
-                  type="button" 
-                  variant="ghost" 
-                  className="w-full"
-                  onClick={() => setStep("phone")}
-                  disabled={loading}
-                >
-                  Change phone number
-                </Button>
-              </form>
-            )}
+                />
+              </div>
+              
+              <Button 
+                type="submit" 
+                size="lg" 
+                className="w-full h-12 bg-gradient-hero hover:opacity-90 transition-opacity"
+                disabled={loading}
+              >
+                {loading ? (
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                ) : (
+                  <>
+                    {isSignUp ? "Create Account" : "Sign In"}
+                    <ArrowRight className="ml-2 h-5 w-5" />
+                  </>
+                )}
+              </Button>
+            </form>
+            
+            <div className="mt-6 text-center">
+              <button
+                type="button"
+                onClick={() => setIsSignUp(!isSignUp)}
+                className="text-sm text-primary hover:underline"
+                disabled={loading}
+              >
+                {isSignUp 
+                  ? "Already have an account? Sign In" 
+                  : "Don't have an account? Sign Up"}
+              </button>
+            </div>
           </CardContent>
         </Card>
       </div>
