@@ -1,7 +1,9 @@
-import { Car, LogOut, User, Menu, Ticket, CarFront } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Car, LogOut, User, Menu, Ticket, CarFront, Settings } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "./ui/button";
 import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -9,11 +11,34 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
-import { Avatar, AvatarFallback } from "./ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 
 const Header = () => {
   const { user, signOut, loading } = useAuth();
   const navigate = useNavigate();
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+
+  // Fetch user's avatar from profile
+  useEffect(() => {
+    const fetchAvatar = async () => {
+      if (!user) {
+        setAvatarUrl(null);
+        return;
+      }
+      
+      const { data } = await supabase
+        .from("profiles")
+        .select("avatar_url")
+        .eq("id", user.id)
+        .maybeSingle();
+      
+      if (data?.avatar_url) {
+        setAvatarUrl(data.avatar_url);
+      }
+    };
+    
+    fetchAvatar();
+  }, [user]);
 
   const handleSignOut = async () => {
     await signOut();
@@ -55,6 +80,7 @@ const Header = () => {
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative h-10 w-10 rounded-full">
                   <Avatar className="h-10 w-10">
+                    <AvatarImage src={avatarUrl || undefined} alt="Profile" />
                     <AvatarFallback className="bg-primary/10 text-primary font-medium">
                       {getUserInitials()}
                     </AvatarFallback>
@@ -62,9 +88,11 @@ const Header = () => {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuItem className="text-muted-foreground font-medium">
-                  <User className="mr-2 h-4 w-4" />
-                  {user.user_metadata?.full_name || user.email || "My Account"}
+                <DropdownMenuItem asChild>
+                  <Link to="/profile" className="flex items-center font-medium">
+                    <User className="mr-2 h-4 w-4" />
+                    {user.user_metadata?.full_name || user.email || "My Profile"}
+                  </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
@@ -80,7 +108,7 @@ const Header = () => {
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleSignOut}>
+                <DropdownMenuItem onClick={handleSignOut} className="text-destructive focus:text-destructive">
                   <LogOut className="mr-2 h-4 w-4" />
                   Sign Out
                 </DropdownMenuItem>
@@ -118,6 +146,9 @@ const Header = () => {
               {user && (
                 <>
                   <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <Link to="/profile">My Profile</Link>
+                  </DropdownMenuItem>
                   <DropdownMenuItem asChild>
                     <Link to="/my-rides">My Rides</Link>
                   </DropdownMenuItem>
