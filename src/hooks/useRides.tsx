@@ -98,14 +98,40 @@ export const useMyBookings = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      const { data, error } = await supabase
+      // First get bookings with ride info
+      const { data: bookingsData, error } = await supabase
         .from("bookings")
         .select(`*, rides:ride_id (*)`)
         .eq("passenger_id", user.id)
         .order("created_at", { ascending: false });
       
       if (error) throw error;
-      return data as Booking[];
+      
+      // For confirmed/pending bookings, fetch driver profiles separately
+      const bookingsWithProfiles = await Promise.all(
+        (bookingsData || []).map(async (booking) => {
+          if (booking.rides && ['confirmed', 'pending'].includes(booking.status)) {
+            const { data: profileData } = await supabase
+              .from("profiles")
+              .select("full_name, phone_number")
+              .eq("id", booking.rides.driver_id)
+              .maybeSingle();
+            
+            if (profileData) {
+              return {
+                ...booking,
+                rides: {
+                  ...booking.rides,
+                  profiles: profileData
+                }
+              };
+            }
+          }
+          return booking;
+        })
+      );
+      
+      return bookingsWithProfiles as Booking[];
     },
   });
 };

@@ -49,10 +49,13 @@ const Auth = () => {
 
     setLoading(true);
     
-    const { error } = await supabase.auth.signUp({
+    const redirectUrl = `${window.location.origin}/`;
+    
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
+        emailRedirectTo: redirectUrl,
         data: {
           full_name: fullName,
         },
@@ -62,10 +65,23 @@ const Auth = () => {
     setLoading(false);
 
     if (error) {
+      let errorMessage = error.message;
+      if (error.message.includes("User already registered")) {
+        errorMessage = "This email is already registered. Please sign in instead.";
+      }
       toast({
         title: "Sign Up Failed",
-        description: error.message,
+        description: errorMessage,
         variant: "destructive",
+      });
+      return;
+    }
+
+    // Check if user was created but needs email confirmation
+    if (data.user && !data.session) {
+      toast({
+        title: "Check Your Email",
+        description: "We've sent you a confirmation link. Please verify your email to continue.",
       });
       return;
     }
