@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import Header from "@/components/Header";
+import AvatarUpload from "@/components/AvatarUpload";
 
 const ProfileSetup = () => {
   const navigate = useNavigate();
@@ -20,6 +21,7 @@ const ProfileSetup = () => {
   // Profile fields
   const [fullName, setFullName] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -116,13 +118,20 @@ const ProfileSetup = () => {
       <div className="container py-12 px-4 flex items-center justify-center">
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
-            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-hero">
-              {step === "profile" ? (
-                <User className="h-8 w-8 text-primary-foreground" />
-              ) : (
+            {step === "profile" ? (
+              <div className="mb-4">
+                <AvatarUpload
+                  userId={user?.id || ""}
+                  currentAvatarUrl={avatarUrl}
+                  onUploadComplete={setAvatarUrl}
+                  size="lg"
+                />
+              </div>
+            ) : (
+              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-hero">
                 <CheckCircle className="h-8 w-8 text-primary-foreground" />
-              )}
-            </div>
+              </div>
+            )}
             <CardTitle className="text-2xl">
               {step === "profile" ? "Complete Your Profile" : "How will you use SwatPool?"}
             </CardTitle>
