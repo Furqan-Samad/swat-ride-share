@@ -14,6 +14,10 @@ export interface Ride {
   description: string | null;
   status: string;
   created_at: string;
+  driver?: {
+    full_name: string | null;
+    avatar_url: string | null;
+  } | null;
 }
 
 export interface Booking {
@@ -37,7 +41,7 @@ export const useRides = (from?: string, to?: string) => {
     queryFn: async () => {
       let query = supabase
         .from("rides")
-        .select("*")
+        .select("*, driver:profiles!rides_driver_id_fkey(full_name, avatar_url)")
         .eq("status", "active")
         .order("departure_date", { ascending: true });
 
