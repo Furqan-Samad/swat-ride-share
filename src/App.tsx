@@ -14,6 +14,7 @@ import VehicleSetup from "./pages/VehicleSetup";
 import MyRides from "./pages/MyRides";
 import MyBookings from "./pages/MyBookings";
 import Profile from "./pages/Profile";
+import ManageBookings from "./pages/ManageBookings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
