@@ -1,10 +1,12 @@
+import { useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { MapPin, Calendar, Users, Star, Phone, MessageCircle, Loader2 } from "lucide-react";
+import { MapPin, Calendar, Users, Star, Phone, MessageCircle, Loader2, Minus, Plus } from "lucide-react";
 import Header from "@/components/Header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { useRide, useCreateBooking } from "@/hooks/useRides";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useRideWithDriver } from "@/hooks/useRideWithDriver";
+import { useCreateBooking } from "@/hooks/useRides";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
@@ -14,8 +16,11 @@ const RideDetails = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
-  const { data: ride, isLoading, error } = useRide(id || "");
+  const { data: ride, isLoading, error } = useRideWithDriver(id || "");
   const createBooking = useCreateBooking();
+  const [seatsToBook, setSeatsToBook] = useState(1);
+
+  const isOwnRide = user?.id === ride?.driver_id;
 
   const formatDate = (dateStr: string) => {
     try {
@@ -47,9 +52,31 @@ const RideDetails = () => {
       return;
     }
 
+    if (isOwnRide) {
+      toast({
+        title: "Cannot book own ride",
+        description: "You cannot book a ride you posted",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (!id) return;
 
-    await createBooking.mutateAsync({ rideId: id, seats: 1 });
+    await createBooking.mutateAsync({ rideId: id, seats: seatsToBook });
+    navigate("/my-bookings");
+  };
+
+  const incrementSeats = () => {
+    if (ride && seatsToBook < ride.available_seats) {
+      setSeatsToBook(seatsToBook + 1);
+    }
+  };
+
+  const decrementSeats = () => {
+    if (seatsToBook > 1) {
+      setSeatsToBook(seatsToBook - 1);
+    }
   };
 
   if (isLoading) {
@@ -78,7 +105,8 @@ const RideDetails = () => {
     );
   }
 
-  const driverName = "Driver";
+  const driverName = ride?.driver?.full_name || "Driver";
+  const driverAvatar = ride?.driver?.avatar_url;
 
   return (
     <div className="min-h-screen bg-background">
@@ -144,8 +172,9 @@ const RideDetails = () => {
               <CardContent className="p-6">
                 <div className="text-center mb-4">
                   <Avatar className="h-24 w-24 mx-auto mb-3">
+                    <AvatarImage src={driverAvatar || undefined} />
                     <AvatarFallback className="text-2xl bg-primary/10 text-primary">
-                      DR
+                      {driverName.charAt(0).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
                   <h3 className="font-semibold text-lg">{driverName}</h3>
@@ -169,21 +198,61 @@ const RideDetails = () => {
                   </div>
                 </div>
 
+                {/* Seat Selection */}
+                {!isOwnRide && (
+                  <div className="mt-4 p-4 bg-muted/50 rounded-lg">
+                    <p className="text-sm text-muted-foreground mb-2 text-center">Seats to book</p>
+                    <div className="flex items-center justify-center gap-4">
+                      <Button 
+                        variant="outline" 
+                        size="icon"
+                        onClick={decrementSeats}
+                        disabled={seatsToBook <= 1}
+                      >
+                        <Minus className="h-4 w-4" />
+                      </Button>
+                      <span className="text-2xl font-bold w-8 text-center">{seatsToBook}</span>
+                      <Button 
+                        variant="outline" 
+                        size="icon"
+                        onClick={incrementSeats}
+                        disabled={seatsToBook >= ride.available_seats}
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <p className="text-center mt-2 text-lg font-semibold text-primary">
+                      Total: ₨{ride.price_per_seat * seatsToBook}
+                    </p>
+                  </div>
+                )}
+
                 <div className="mt-6 space-y-3">
-                  <Button 
-                    className="w-full bg-gradient-hero hover:opacity-90 transition-opacity"
-                    onClick={handleBookRide}
-                    disabled={createBooking.isPending}
-                  >
-                    {createBooking.isPending ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <>
-                        <MessageCircle className="mr-2 h-4 w-4" />
-                        Book Ride
-                      </>
-                    )}
-                  </Button>
+                  {isOwnRide ? (
+                    <Button 
+                      className="w-full"
+                      variant="secondary"
+                      onClick={() => navigate("/manage-bookings")}
+                    >
+                      <Users className="mr-2 h-4 w-4" />
+                      Manage Bookings
+                    </Button>
+                  ) : (
+                    <Button 
+                      className="w-full bg-gradient-hero hover:opacity-90 transition-opacity"
+                      onClick={handleBookRide}
+                      disabled={createBooking.isPending}
+                    >
+                      {createBooking.isPending ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <>
+                          <MessageCircle className="mr-2 h-4 w-4" />
+                          Book {seatsToBook} Seat{seatsToBook > 1 ? "s" : ""}
+                        </>
+                      )}
+                    </Button>
+                  )}
                   <Button variant="outline" className="w-full" disabled>
                     <Phone className="mr-2 h-4 w-4" />
                     Contact After Booking
