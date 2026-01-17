@@ -106,7 +106,8 @@ const SearchRides = () => {
                     price={ride.price_per_seat}
                     seats={ride.available_seats}
                     driver={{
-                      name: "Driver",
+                      name: ride.driver?.full_name || "Driver",
+                      avatar: ride.driver?.avatar_url || undefined,
                       rating: 4.8,
                     }}
                   />
