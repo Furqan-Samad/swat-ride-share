@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
+import { BookingNotificationListener } from "@/components/BookingNotificationListener";
 import Index from "./pages/Index";
 import SearchRides from "./pages/SearchRides";
 import RideDetails from "./pages/RideDetails";
@@ -23,6 +24,7 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
       <TooltipProvider>
+        <BookingNotificationListener />
         <Toaster />
         <Sonner />
         <BrowserRouter>
