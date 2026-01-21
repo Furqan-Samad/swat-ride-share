@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { MapPin, Calendar, Users, Star, Phone, MessageCircle, Loader2, Minus, Plus } from "lucide-react";
+import { MapPin, Calendar, Users, Phone, MessageCircle, Loader2, Minus, Plus } from "lucide-react";
 import Header from "@/components/Header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -11,6 +11,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import DriverRating from "@/components/DriverRating";
+import ReviewList from "@/components/ReviewList";
 
 // WhatsApp icon component
 const WhatsAppIcon = ({ className }: { className?: string }) => (
@@ -252,18 +254,10 @@ const RideDetails = () => {
                   </span>
                 </div>
 
-                <div className="flex items-center justify-center space-x-6 py-4 border-y border-border">
+                <div className="flex items-center justify-center py-4 border-y border-border">
                   <div className="text-center">
-                    <div className="flex items-center space-x-1 text-lg font-semibold">
-                      <Star className="h-5 w-5 text-yellow-500 fill-yellow-500" />
-                      <span>4.8</span>
-                    </div>
-                    <div className="text-xs text-muted-foreground">Rating</div>
-                  </div>
-                  <div className="h-8 w-px bg-border" />
-                  <div className="text-center">
-                    <div className="text-lg font-semibold">New</div>
-                    <div className="text-xs text-muted-foreground">Driver</div>
+                    <DriverRating driverId={ride.driver_id} size="lg" />
+                    <div className="text-xs text-muted-foreground mt-1">Rating</div>
                   </div>
                 </div>
 
@@ -384,6 +378,14 @@ const RideDetails = () => {
                     </Button>
                   </div>
                 </div>
+              </CardContent>
+            </Card>
+
+            {/* Reviews Section */}
+            <Card>
+              <CardContent className="p-6">
+                <h3 className="font-semibold mb-4">Driver Reviews</h3>
+                <ReviewList driverId={ride.driver_id} limit={3} />
               </CardContent>
             </Card>
           </div>
