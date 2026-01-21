@@ -10,6 +10,10 @@ export interface RideWithDriver {
   departure_time: string;
   available_seats: number;
   price_per_seat: number;
+  front_seat_price: number | null;
+  back_seat_price: number | null;
+  front_seats_available: number | null;
+  back_seats_available: number | null;
   description: string | null;
   status: string;
   created_at: string;

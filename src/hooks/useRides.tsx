@@ -25,6 +25,7 @@ export interface Booking {
   ride_id: string;
   passenger_id: string;
   seats_booked: number;
+  seat_type: 'front' | 'back';
   status: string;
   created_at: string;
   rides?: Ride & {
@@ -152,6 +153,10 @@ export const useCreateRide = () => {
       departure_time: string;
       available_seats: number;
       price_per_seat: number;
+      front_seat_price?: number;
+      back_seat_price?: number;
+      front_seats_available?: number;
+      back_seats_available?: number;
       description?: string;
     }) => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -182,21 +187,59 @@ export const useCreateBooking = () => {
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: async ({ rideId, seats }: { rideId: string; seats: number }) => {
+    mutationFn: async ({ rideId, seats, seatType }: { rideId: string; seats: number; seatType: 'front' | 'back' }) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("You must be logged in to book a ride");
 
+      // First check seat availability
+      const { data: ride, error: rideError } = await supabase
+        .from("rides")
+        .select("front_seats_available, back_seats_available")
+        .eq("id", rideId)
+        .single();
+
+      if (rideError) throw rideError;
+
+      const availableSeats = seatType === 'front' 
+        ? (ride.front_seats_available ?? 0) 
+        : (ride.back_seats_available ?? 0);
+
+      if (seats > availableSeats) {
+        throw new Error(`Only ${availableSeats} ${seatType} seat(s) available`);
+      }
+
+      // Create booking
       const { data, error } = await supabase
         .from("bookings")
-        .insert({ ride_id: rideId, passenger_id: user.id, seats_booked: seats })
+        .insert({ 
+          ride_id: rideId, 
+          passenger_id: user.id, 
+          seats_booked: seats,
+          seat_type: seatType
+        })
         .select()
         .single();
       
       if (error) throw error;
+
+      // Update seat availability on the ride
+      const updateField = seatType === 'front' ? 'front_seats_available' : 'back_seats_available';
+      const newAvailable = availableSeats - seats;
+      
+      await supabase
+        .from("rides")
+        .update({ 
+          [updateField]: newAvailable,
+          available_seats: (ride.front_seats_available ?? 0) + (ride.back_seats_available ?? 0) - seats
+        })
+        .eq("id", rideId);
+
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["rides"] });
+      queryClient.invalidateQueries({ queryKey: ["ridesWithDriver"] });
+      queryClient.invalidateQueries({ queryKey: ["rideWithDriver"] });
       queryClient.invalidateQueries({ queryKey: ["myBookings"] });
       toast({ title: "Booking Requested!", description: "The driver will be notified" });
     },

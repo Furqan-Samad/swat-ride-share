@@ -105,6 +105,10 @@ const SearchRides = () => {
                     time={formatTime(ride.departure_time)}
                     price={ride.price_per_seat}
                     seats={ride.available_seats}
+                    frontSeatsAvailable={(ride as any).front_seats_available}
+                    backSeatsAvailable={(ride as any).back_seats_available}
+                    frontPrice={(ride as any).front_seat_price}
+                    backPrice={(ride as any).back_seat_price}
                     driver={{
                       name: ride.driver?.full_name || "Driver",
                       avatar: ride.driver?.avatar_url || undefined,
