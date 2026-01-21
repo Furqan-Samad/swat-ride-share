@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { MapPin, Calendar, Users, DollarSign, Loader2 } from "lucide-react";
+import { MapPin, Calendar, Users, DollarSign, Loader2, Armchair } from "lucide-react";
 import Header from "@/components/Header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useCreateRide } from "@/hooks/useRides";
@@ -20,9 +21,18 @@ const PostRide = () => {
   const [to, setTo] = useState("");
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
-  const [seats, setSeats] = useState("");
-  const [price, setPrice] = useState("");
+  const [frontSeats, setFrontSeats] = useState("1");
+  const [backSeats, setBackSeats] = useState("3");
+  const [frontPrice, setFrontPrice] = useState("");
+  const [backPrice, setBackPrice] = useState("");
   const [description, setDescription] = useState("");
+
+  // Auto-calculate front price when back price changes (50% more)
+  useEffect(() => {
+    if (backPrice && !frontPrice) {
+      setFrontPrice(String(Math.round(parseInt(backPrice) * 1.5)));
+    }
+  }, [backPrice]);
 
   // Redirect to auth if not logged in
   useEffect(() => {
@@ -40,10 +50,20 @@ const PostRide = () => {
     e.preventDefault();
     
     // Basic validation
-    if (!to || !date || !time || !seats || !price) {
+    if (!to || !date || !time || !backPrice) {
       toast({
         title: "Missing Information",
         description: "Please fill in all required fields",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const totalSeats = parseInt(frontSeats || "0") + parseInt(backSeats || "0");
+    if (totalSeats < 1) {
+      toast({
+        title: "Invalid Seats",
+        description: "Please provide at least 1 seat",
         variant: "destructive",
       });
       return;
@@ -54,8 +74,12 @@ const PostRide = () => {
       destination: to,
       departure_date: date,
       departure_time: time,
-      available_seats: parseInt(seats),
-      price_per_seat: parseInt(price),
+      available_seats: totalSeats,
+      price_per_seat: parseInt(backPrice),
+      front_seat_price: parseInt(frontPrice) || Math.round(parseInt(backPrice) * 1.5),
+      back_seat_price: parseInt(backPrice),
+      front_seats_available: parseInt(frontSeats) || 0,
+      back_seats_available: parseInt(backSeats) || 0,
       description: description || undefined,
     });
 
@@ -127,33 +151,77 @@ const PostRide = () => {
                 />
               </div>
 
-              {/* Seats & Price */}
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="relative">
-                  <Users className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
-                  <Input
-                    type="number"
-                    placeholder="Available seats"
-                    value={seats}
-                    onChange={(e) => setSeats(e.target.value)}
-                    className="pl-10"
-                    min="1"
-                    max="6"
-                    required
-                  />
+              {/* Seat Availability Section */}
+              <div className="space-y-4 p-4 bg-muted/50 rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <Armchair className="h-5 w-5 text-primary" />
+                  <h3 className="font-semibold">Seat Availability & Pricing</h3>
                 </div>
-                <div className="relative">
-                  <DollarSign className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
-                  <Input
-                    type="number"
-                    placeholder="Price per seat (₨)"
-                    value={price}
-                    onChange={(e) => setPrice(e.target.value)}
-                    className="pl-10"
-                    min="0"
-                    required
-                  />
+                
+                <div className="grid gap-4 md:grid-cols-2">
+                  {/* Front Seats */}
+                  <div className="space-y-2 p-3 bg-background rounded-lg border">
+                    <Label className="text-sm font-medium">Front Seats</Label>
+                    <div className="relative">
+                      <Users className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        type="number"
+                        placeholder="Count"
+                        value={frontSeats}
+                        onChange={(e) => setFrontSeats(e.target.value)}
+                        className="pl-10"
+                        min="0"
+                        max="2"
+                      />
+                    </div>
+                    <div className="relative">
+                      <DollarSign className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        type="number"
+                        placeholder="Price (₨)"
+                        value={frontPrice}
+                        onChange={(e) => setFrontPrice(e.target.value)}
+                        className="pl-10"
+                        min="0"
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground">Premium seat with more space</p>
+                  </div>
+
+                  {/* Back Seats */}
+                  <div className="space-y-2 p-3 bg-background rounded-lg border">
+                    <Label className="text-sm font-medium">Back Seats</Label>
+                    <div className="relative">
+                      <Users className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        type="number"
+                        placeholder="Count"
+                        value={backSeats}
+                        onChange={(e) => setBackSeats(e.target.value)}
+                        className="pl-10"
+                        min="0"
+                        max="4"
+                      />
+                    </div>
+                    <div className="relative">
+                      <DollarSign className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        type="number"
+                        placeholder="Price (₨)"
+                        value={backPrice}
+                        onChange={(e) => setBackPrice(e.target.value)}
+                        className="pl-10"
+                        min="0"
+                        required
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground">Standard seat pricing</p>
+                  </div>
                 </div>
+
+                <p className="text-sm text-muted-foreground text-center">
+                  Total seats: <span className="font-semibold">{(parseInt(frontSeats) || 0) + (parseInt(backSeats) || 0)}</span>
+                </p>
               </div>
 
               {/* Description */}
@@ -187,6 +255,7 @@ const PostRide = () => {
           <h3 className="font-semibold mb-3">Tips for a successful trip</h3>
           <ul className="space-y-2 text-sm text-muted-foreground">
             <li>• Set a fair price that covers your fuel costs</li>
+            <li>• Front seats typically cost 50% more than back seats</li>
             <li>• Be clear about pickup points and any stops</li>
             <li>• Respond quickly to booking requests</li>
             <li>• Keep your phone accessible on the day of travel</li>

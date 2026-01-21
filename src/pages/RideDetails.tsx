@@ -10,6 +10,14 @@ import { useCreateBooking } from "@/hooks/useRides";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
+import { cn } from "@/lib/utils";
+
+// WhatsApp icon component
+const WhatsAppIcon = ({ className }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" className={className} fill="currentColor">
+    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+  </svg>
+);
 
 const RideDetails = () => {
   const { id } = useParams();
@@ -19,6 +27,7 @@ const RideDetails = () => {
   const { data: ride, isLoading, error } = useRideWithDriver(id || "");
   const createBooking = useCreateBooking();
   const [seatsToBook, setSeatsToBook] = useState(1);
+  const [seatType, setSeatType] = useState<'front' | 'back'>('back');
 
   const isOwnRide = user?.id === ride?.driver_id;
 
@@ -63,12 +72,19 @@ const RideDetails = () => {
 
     if (!id) return;
 
-    await createBooking.mutateAsync({ rideId: id, seats: seatsToBook });
+    await createBooking.mutateAsync({ rideId: id, seats: seatsToBook, seatType });
     navigate("/my-bookings");
   };
 
+  const frontSeatsAvailable = ride?.front_seats_available ?? 1;
+  const backSeatsAvailable = ride?.back_seats_available ?? 3;
+  const currentMaxSeats = seatType === 'front' ? frontSeatsAvailable : backSeatsAvailable;
+  const frontPrice = ride?.front_seat_price ?? Math.round((ride?.price_per_seat ?? 0) * 1.5);
+  const backPrice = ride?.back_seat_price ?? ride?.price_per_seat ?? 0;
+  const currentPrice = seatType === 'front' ? frontPrice : backPrice;
+
   const incrementSeats = () => {
-    if (ride && seatsToBook < ride.available_seats) {
+    if (seatsToBook < currentMaxSeats) {
       setSeatsToBook(seatsToBook + 1);
     }
   };
@@ -76,6 +92,42 @@ const RideDetails = () => {
   const decrementSeats = () => {
     if (seatsToBook > 1) {
       setSeatsToBook(seatsToBook - 1);
+    }
+  };
+
+  // Reset seats when seat type changes
+  const handleSeatTypeChange = (type: 'front' | 'back') => {
+    setSeatType(type);
+    const maxForType = type === 'front' ? frontSeatsAvailable : backSeatsAvailable;
+    if (seatsToBook > maxForType) {
+      setSeatsToBook(Math.max(1, maxForType));
+    }
+  };
+
+  const driverPhone = ride?.driver?.phone_number;
+  const formattedPhone = driverPhone?.replace(/\D/g, '');
+
+  const handleWhatsAppContact = () => {
+    if (formattedPhone) {
+      window.open(`https://wa.me/${formattedPhone}`, '_blank');
+    } else {
+      toast({
+        title: "Phone not available",
+        description: "Driver's phone number is not registered",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handlePhoneCall = () => {
+    if (driverPhone) {
+      window.location.href = `tel:${driverPhone}`;
+    } else {
+      toast({
+        title: "Phone not available",
+        description: "Driver's phone number is not registered",
+        variant: "destructive",
+      });
     }
   };
 
@@ -107,6 +159,8 @@ const RideDetails = () => {
 
   const driverName = ride?.driver?.full_name || "Driver";
   const driverAvatar = ride?.driver?.avatar_url;
+  const totalSeatsAvailable = frontSeatsAvailable + backSeatsAvailable;
+  const noSeatsAvailable = totalSeatsAvailable === 0;
 
   return (
     <div className="min-h-screen bg-background">
@@ -140,8 +194,23 @@ const RideDetails = () => {
                   </div>
 
                   <div className="text-right">
-                    <div className="text-4xl font-bold text-primary">₨{ride.price_per_seat}</div>
+                    <div className="text-sm text-muted-foreground mb-1">Starting from</div>
+                    <div className="text-4xl font-bold text-primary">₨{backPrice}</div>
                     <div className="text-sm text-muted-foreground">per seat</div>
+                  </div>
+                </div>
+
+                {/* Seat Pricing Info */}
+                <div className="grid grid-cols-2 gap-4 p-4 bg-muted/50 rounded-lg mb-4">
+                  <div className="text-center">
+                    <div className="text-sm text-muted-foreground">Front Seat</div>
+                    <div className="text-xl font-bold text-primary">₨{frontPrice}</div>
+                    <div className="text-xs text-muted-foreground">{frontSeatsAvailable} available</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-sm text-muted-foreground">Back Seat</div>
+                    <div className="text-xl font-bold text-primary">₨{backPrice}</div>
+                    <div className="text-xs text-muted-foreground">{backSeatsAvailable} available</div>
                   </div>
                 </div>
 
@@ -152,7 +221,7 @@ const RideDetails = () => {
                   </div>
                   <div className="flex items-center space-x-2 text-muted-foreground">
                     <Users className="h-5 w-5" />
-                    <span>{ride.available_seats} seats available</span>
+                    <span>{totalSeatsAvailable} seats available ({frontSeatsAvailable} front, {backSeatsAvailable} back)</span>
                   </div>
                 </div>
 
@@ -198,32 +267,74 @@ const RideDetails = () => {
                   </div>
                 </div>
 
-                {/* Seat Selection */}
-                {!isOwnRide && (
-                  <div className="mt-4 p-4 bg-muted/50 rounded-lg">
-                    <p className="text-sm text-muted-foreground mb-2 text-center">Seats to book</p>
-                    <div className="flex items-center justify-center gap-4">
-                      <Button 
-                        variant="outline" 
-                        size="icon"
-                        onClick={decrementSeats}
-                        disabled={seatsToBook <= 1}
-                      >
-                        <Minus className="h-4 w-4" />
-                      </Button>
-                      <span className="text-2xl font-bold w-8 text-center">{seatsToBook}</span>
-                      <Button 
-                        variant="outline" 
-                        size="icon"
-                        onClick={incrementSeats}
-                        disabled={seatsToBook >= ride.available_seats}
-                      >
-                        <Plus className="h-4 w-4" />
-                      </Button>
+                {/* Seat Type Selection */}
+                {!isOwnRide && !noSeatsAvailable && (
+                  <div className="mt-4 space-y-4">
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-2 text-center">Select seat type</p>
+                      <div className="grid grid-cols-2 gap-2">
+                        <Button
+                          variant={seatType === 'front' ? 'default' : 'outline'}
+                          className={cn(
+                            "flex-col h-auto py-3",
+                            seatType === 'front' && "bg-primary text-primary-foreground"
+                          )}
+                          onClick={() => handleSeatTypeChange('front')}
+                          disabled={frontSeatsAvailable === 0}
+                        >
+                          <span className="text-sm font-medium">Front Seat</span>
+                          <span className="text-lg font-bold">₨{frontPrice}</span>
+                          <span className="text-xs opacity-70">{frontSeatsAvailable} left</span>
+                        </Button>
+                        <Button
+                          variant={seatType === 'back' ? 'default' : 'outline'}
+                          className={cn(
+                            "flex-col h-auto py-3",
+                            seatType === 'back' && "bg-primary text-primary-foreground"
+                          )}
+                          onClick={() => handleSeatTypeChange('back')}
+                          disabled={backSeatsAvailable === 0}
+                        >
+                          <span className="text-sm font-medium">Back Seat</span>
+                          <span className="text-lg font-bold">₨{backPrice}</span>
+                          <span className="text-xs opacity-70">{backSeatsAvailable} left</span>
+                        </Button>
+                      </div>
                     </div>
-                    <p className="text-center mt-2 text-lg font-semibold text-primary">
-                      Total: ₨{ride.price_per_seat * seatsToBook}
-                    </p>
+
+                    {/* Seat Count Selection */}
+                    <div className="p-4 bg-muted/50 rounded-lg">
+                      <p className="text-sm text-muted-foreground mb-2 text-center">Number of seats</p>
+                      <div className="flex items-center justify-center gap-4">
+                        <Button 
+                          variant="outline" 
+                          size="icon"
+                          onClick={decrementSeats}
+                          disabled={seatsToBook <= 1}
+                        >
+                          <Minus className="h-4 w-4" />
+                        </Button>
+                        <span className="text-2xl font-bold w-8 text-center">{seatsToBook}</span>
+                        <Button 
+                          variant="outline" 
+                          size="icon"
+                          onClick={incrementSeats}
+                          disabled={seatsToBook >= currentMaxSeats}
+                        >
+                          <Plus className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      <p className="text-center mt-2 text-lg font-semibold text-primary">
+                        Total: ₨{currentPrice * seatsToBook}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {noSeatsAvailable && !isOwnRide && (
+                  <div className="mt-4 p-4 bg-destructive/10 rounded-lg text-center">
+                    <p className="text-destructive font-medium">No seats available</p>
+                    <p className="text-sm text-muted-foreground">This ride is fully booked</p>
                   </div>
                 )}
 
@@ -241,22 +352,37 @@ const RideDetails = () => {
                     <Button 
                       className="w-full bg-gradient-hero hover:opacity-90 transition-opacity"
                       onClick={handleBookRide}
-                      disabled={createBooking.isPending}
+                      disabled={createBooking.isPending || noSeatsAvailable}
                     >
                       {createBooking.isPending ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
                       ) : (
                         <>
                           <MessageCircle className="mr-2 h-4 w-4" />
-                          Book {seatsToBook} Seat{seatsToBook > 1 ? "s" : ""}
+                          Book {seatsToBook} {seatType === 'front' ? 'Front' : 'Back'} Seat{seatsToBook > 1 ? "s" : ""}
                         </>
                       )}
                     </Button>
                   )}
-                  <Button variant="outline" className="w-full" disabled>
-                    <Phone className="mr-2 h-4 w-4" />
-                    Contact After Booking
-                  </Button>
+                  
+                  {/* Contact Options */}
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button 
+                      variant="outline" 
+                      className="bg-[#25D366] hover:bg-[#128C7E] text-white hover:text-white border-0"
+                      onClick={handleWhatsAppContact}
+                    >
+                      <WhatsAppIcon className="mr-2 h-4 w-4" />
+                      WhatsApp
+                    </Button>
+                    <Button 
+                      variant="outline"
+                      onClick={handlePhoneCall}
+                    >
+                      <Phone className="mr-2 h-4 w-4" />
+                      Call
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>

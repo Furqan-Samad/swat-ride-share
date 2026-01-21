@@ -12,6 +12,10 @@ interface RideCardProps {
   time: string;
   price: number;
   seats: number;
+  frontSeatsAvailable?: number;
+  backSeatsAvailable?: number;
+  frontPrice?: number;
+  backPrice?: number;
   driver: {
     name: string;
     avatar?: string;
@@ -19,7 +23,11 @@ interface RideCardProps {
   };
 }
 
-const RideCard = ({ id, from, to, date, time, price, seats, driver }: RideCardProps) => {
+const RideCard = ({ id, from, to, date, time, price, seats, frontSeatsAvailable, backSeatsAvailable, frontPrice, backPrice, driver }: RideCardProps) => {
+  const hasSeatTypeInfo = frontSeatsAvailable !== undefined && backSeatsAvailable !== undefined;
+  const totalAvailable = hasSeatTypeInfo ? frontSeatsAvailable + backSeatsAvailable : seats;
+  const isSoldOut = totalAvailable === 0;
+
   return (
     <Card className="overflow-hidden transition-all hover:shadow-card-hover">
       <CardContent className="p-6">
@@ -41,8 +49,13 @@ const RideCard = ({ id, from, to, date, time, price, seats, driver }: RideCardPr
           </div>
 
           <div className="text-right">
-            <div className="text-3xl font-bold text-primary">₨{price}</div>
-            <div className="text-xs text-muted-foreground">per seat</div>
+            <div className="text-3xl font-bold text-primary">₨{backPrice ?? price}</div>
+            <div className="text-xs text-muted-foreground">back seat</div>
+            {frontPrice && (
+              <div className="text-xs text-muted-foreground mt-1">
+                Front: ₨{frontPrice}
+              </div>
+            )}
           </div>
         </div>
 
@@ -52,10 +65,19 @@ const RideCard = ({ id, from, to, date, time, price, seats, driver }: RideCardPr
               <Calendar className="h-4 w-4" />
               <span>{date}</span>
             </div>
-            <div className="flex items-center space-x-1">
-              <Users className="h-4 w-4" />
-              <span>{seats} seats</span>
-            </div>
+            {hasSeatTypeInfo ? (
+              <div className="flex items-center space-x-1">
+                <Users className="h-4 w-4" />
+                <span className={isSoldOut ? "text-destructive font-medium" : ""}>
+                  {isSoldOut ? "Sold out" : `${frontSeatsAvailable}F / ${backSeatsAvailable}B`}
+                </span>
+              </div>
+            ) : (
+              <div className="flex items-center space-x-1">
+                <Users className="h-4 w-4" />
+                <span>{seats} seats</span>
+              </div>
+            )}
           </div>
 
           <div className="flex items-center space-x-2">

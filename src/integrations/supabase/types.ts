@@ -20,6 +20,7 @@ export type Database = {
           id: string
           passenger_id: string
           ride_id: string
+          seat_type: string | null
           seats_booked: number
           status: string
           updated_at: string
@@ -29,6 +30,7 @@ export type Database = {
           id?: string
           passenger_id: string
           ride_id: string
+          seat_type?: string | null
           seats_booked?: number
           status?: string
           updated_at?: string
@@ -38,6 +40,7 @@ export type Database = {
           id?: string
           passenger_id?: string
           ride_id?: string
+          seat_type?: string | null
           seats_booked?: number
           status?: string
           updated_at?: string
@@ -95,12 +98,16 @@ export type Database = {
       rides: {
         Row: {
           available_seats: number
+          back_seat_price: number | null
+          back_seats_available: number | null
           created_at: string
           departure_date: string
           departure_time: string
           description: string | null
           destination: string
           driver_id: string
+          front_seat_price: number | null
+          front_seats_available: number | null
           id: string
           origin: string
           price_per_seat: number
@@ -109,12 +116,16 @@ export type Database = {
         }
         Insert: {
           available_seats: number
+          back_seat_price?: number | null
+          back_seats_available?: number | null
           created_at?: string
           departure_date: string
           departure_time: string
           description?: string | null
           destination: string
           driver_id: string
+          front_seat_price?: number | null
+          front_seats_available?: number | null
           id?: string
           origin: string
           price_per_seat: number
@@ -123,12 +134,16 @@ export type Database = {
         }
         Update: {
           available_seats?: number
+          back_seat_price?: number | null
+          back_seats_available?: number | null
           created_at?: string
           departure_date?: string
           departure_time?: string
           description?: string | null
           destination?: string
           driver_id?: string
+          front_seat_price?: number | null
+          front_seats_available?: number | null
           id?: string
           origin?: string
           price_per_seat?: number
