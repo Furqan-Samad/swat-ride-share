@@ -95,6 +95,58 @@ export type Database = {
         }
         Relationships: []
       }
+      reviews: {
+        Row: {
+          booking_id: string
+          comment: string | null
+          created_at: string
+          driver_id: string
+          id: string
+          passenger_id: string
+          rating: number
+        }
+        Insert: {
+          booking_id: string
+          comment?: string | null
+          created_at?: string
+          driver_id: string
+          id?: string
+          passenger_id: string
+          rating: number
+        }
+        Update: {
+          booking_id?: string
+          comment?: string | null
+          created_at?: string
+          driver_id?: string
+          id?: string
+          passenger_id?: string
+          rating?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reviews_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: true
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reviews_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reviews_passenger_id_fkey"
+            columns: ["passenger_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       rides: {
         Row: {
           available_seats: number
