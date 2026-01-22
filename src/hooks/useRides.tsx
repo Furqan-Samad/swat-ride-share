@@ -234,6 +234,21 @@ export const useCreateBooking = () => {
         })
         .eq("id", rideId);
 
+      // Send WhatsApp notification (fire and forget - don't block booking)
+      try {
+        const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID || 'bpoynxqqumbsstfgrjqg';
+        fetch(`https://${projectId}.supabase.co/functions/v1/send-whatsapp-notification`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          },
+          body: JSON.stringify({ bookingId: data.id }),
+        }).catch(console.error);
+      } catch (notifError) {
+        console.error('Failed to send WhatsApp notification:', notifError);
+      }
+
       return data;
     },
     onSuccess: () => {
@@ -241,7 +256,7 @@ export const useCreateBooking = () => {
       queryClient.invalidateQueries({ queryKey: ["ridesWithDriver"] });
       queryClient.invalidateQueries({ queryKey: ["rideWithDriver"] });
       queryClient.invalidateQueries({ queryKey: ["myBookings"] });
-      toast({ title: "Booking Requested!", description: "The driver will be notified" });
+      toast({ title: "Booking Requested!", description: "The driver will be notified via WhatsApp" });
     },
     onError: (error: Error) => {
       toast({ title: "Booking Failed", description: error.message, variant: "destructive" });
