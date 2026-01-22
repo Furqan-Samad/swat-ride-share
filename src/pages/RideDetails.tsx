@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { MapPin, Calendar, Users, Phone, MessageCircle, Loader2, Minus, Plus } from "lucide-react";
 import Header from "@/components/Header";
@@ -13,6 +13,7 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import DriverRating from "@/components/DriverRating";
 import ReviewList from "@/components/ReviewList";
+import { useRealtimeRides } from "@/hooks/useRealtimeRides";
 
 // WhatsApp icon component
 const WhatsAppIcon = ({ className }: { className?: string }) => (
@@ -30,6 +31,9 @@ const RideDetails = () => {
   const createBooking = useCreateBooking();
   const [seatsToBook, setSeatsToBook] = useState(1);
   const [seatType, setSeatType] = useState<'front' | 'back'>('back');
+
+  // Enable real-time updates for seat availability
+  useRealtimeRides();
 
   const isOwnRide = user?.id === ride?.driver_id;
 

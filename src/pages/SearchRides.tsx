@@ -5,6 +5,7 @@ import RideCard from "@/components/RideCard";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useRides } from "@/hooks/useRides";
+import { useRealtimeRides } from "@/hooks/useRealtimeRides";
 import { format } from "date-fns";
 
 const SearchRides = () => {
@@ -14,6 +15,9 @@ const SearchRides = () => {
   const [searchTo, setSearchTo] = useState("");
 
   const { data: rides, isLoading, error } = useRides(searchFrom, searchTo);
+  
+  // Enable real-time updates for seat availability
+  useRealtimeRides();
 
   const handleSearch = () => {
     setSearchFrom(from);
