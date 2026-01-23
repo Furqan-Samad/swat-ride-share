@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { sanitizeSearchInput } from "@/lib/sanitize";
 
 export interface Ride {
   id: string;
@@ -51,10 +52,12 @@ export const useRides = (from?: string, to?: string) => {
         .order("departure_date", { ascending: true });
 
       if (from) {
-        query = query.ilike("origin", `%${from}%`);
+        const sanitizedFrom = sanitizeSearchInput(from);
+        query = query.ilike("origin", `%${sanitizedFrom}%`);
       }
       if (to) {
-        query = query.ilike("destination", `%${to}%`);
+        const sanitizedTo = sanitizeSearchInput(to);
+        query = query.ilike("destination", `%${sanitizedTo}%`);
       }
 
       const { data, error } = await query;
@@ -116,10 +119,11 @@ export const useMyBookings = () => {
       
       if (error) throw error;
       
-      // For confirmed/pending bookings, fetch driver profiles separately
+      // For bookings, fetch driver profiles - phone number ONLY for confirmed bookings
       const bookingsWithProfiles = await Promise.all(
         (bookingsData || []).map(async (booking) => {
           if (booking.rides && ['confirmed', 'pending'].includes(booking.status)) {
+            // Always fetch both fields, but only expose phone for confirmed
             const { data: profileData } = await supabase
               .from("profiles")
               .select("full_name, phone_number")
@@ -131,7 +135,11 @@ export const useMyBookings = () => {
                 ...booking,
                 rides: {
                   ...booking.rides,
-                  profiles: profileData
+                  profiles: {
+                    full_name: profileData.full_name,
+                    // Only include phone_number if booking is confirmed (security: prevent harvesting)
+                    phone_number: booking.status === 'confirmed' ? profileData.phone_number : null
+                  }
                 }
               };
             }

@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { sanitizeSearchInput } from "@/lib/sanitize";
 
 export interface RideWithDriver {
   id: string;
@@ -35,10 +36,12 @@ export const useRidesWithDriver = (from?: string, to?: string) => {
         .order("departure_date", { ascending: true });
 
       if (from) {
-        query = query.ilike("origin", `%${from}%`);
+        const sanitizedFrom = sanitizeSearchInput(from);
+        query = query.ilike("origin", `%${sanitizedFrom}%`);
       }
       if (to) {
-        query = query.ilike("destination", `%${to}%`);
+        const sanitizedTo = sanitizeSearchInput(to);
+        query = query.ilike("destination", `%${sanitizedTo}%`);
       }
 
       const { data: rides, error } = await query;
