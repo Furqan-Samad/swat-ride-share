@@ -264,7 +264,50 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      vehicles_public: {
+        Row: {
+          created_at: string | null
+          driver_id: string | null
+          id: string | null
+          seats_available: number | null
+          vehicle_color: string | null
+          vehicle_make: string | null
+          vehicle_model: string | null
+          vehicle_type: string | null
+          vehicle_year: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          driver_id?: string | null
+          id?: string | null
+          seats_available?: number | null
+          vehicle_color?: string | null
+          vehicle_make?: string | null
+          vehicle_model?: string | null
+          vehicle_type?: string | null
+          vehicle_year?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          driver_id?: string | null
+          id?: string | null
+          seats_available?: number | null
+          vehicle_color?: string | null
+          vehicle_make?: string | null
+          vehicle_model?: string | null
+          vehicle_type?: string | null
+          vehicle_year?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vehicles_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       [_ in never]: never
