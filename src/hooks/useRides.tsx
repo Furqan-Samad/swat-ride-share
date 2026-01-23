@@ -11,6 +11,10 @@ export interface Ride {
   departure_time: string;
   available_seats: number;
   price_per_seat: number;
+  front_seat_price?: number | null;
+  back_seat_price?: number | null;
+  front_seats_available?: number | null;
+  back_seats_available?: number | null;
   description: string | null;
   status: string;
   created_at: string;
@@ -86,7 +90,7 @@ export const useMyRides = () => {
 
       const { data, error } = await supabase
         .from("rides")
-        .select("*")
+        .select("*, front_seat_price, back_seat_price, front_seats_available, back_seats_available")
         .eq("driver_id", user.id)
         .order("departure_date", { ascending: false });
       
