@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { BookingNotificationListener } from "@/components/BookingNotificationListener";
+import { NotificationListener } from "@/components/NotificationListener";
 import Index from "./pages/Index";
 import SearchRides from "./pages/SearchRides";
 import RideDetails from "./pages/RideDetails";
@@ -16,6 +17,7 @@ import MyRides from "./pages/MyRides";
 import MyBookings from "./pages/MyBookings";
 import Profile from "./pages/Profile";
 import ManageBookings from "./pages/ManageBookings";
+import Notifications from "./pages/Notifications";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -25,6 +27,7 @@ const App = () => (
     <AuthProvider>
       <TooltipProvider>
         <BookingNotificationListener />
+        <NotificationListener />
         <Toaster />
         <Sonner />
         <BrowserRouter>
@@ -40,6 +43,7 @@ const App = () => (
             <Route path="/my-bookings" element={<MyBookings />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/manage-bookings" element={<ManageBookings />} />
+            <Route path="/notifications" element={<Notifications />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
