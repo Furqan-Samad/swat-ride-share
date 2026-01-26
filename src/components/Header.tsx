@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
-import { Car, LogOut, User, Menu, Ticket, CarFront, Settings, Users } from "lucide-react";
+import { Car, LogOut, User, Menu, Ticket, CarFront, Settings, Users, Bell } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "./ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import { NotificationBell } from "./NotificationBell";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -72,7 +73,9 @@ const Header = () => {
           </Link>
         </nav>
 
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center space-x-2">
+          {user && <NotificationBell />}
+          
           {loading ? (
             <div className="h-9 w-20 animate-pulse rounded-md bg-muted" />
           ) : user ? (

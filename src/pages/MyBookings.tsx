@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Ticket, Calendar, MapPin, Loader2, Phone, Star } from "lucide-react";
+import { Ticket, Calendar, MapPin, Loader2, Phone, Star, XCircle } from "lucide-react";
 import Header from "@/components/Header";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -9,7 +9,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { useAuth } from "@/hooks/useAuth";
 import { useMyBookings, Booking } from "@/hooks/useRides";
 import { useBookingReview } from "@/hooks/useReviews";
+import { useCancelBooking } from "@/hooks/usePassengerCancellation";
 import ReviewForm from "@/components/ReviewForm";
+import { CancelBookingDialog } from "@/components/CancelBookingDialog";
+import { EmergencyContactButton } from "@/components/EmergencyContactButton";
 import { format } from "date-fns";
 
 // WhatsApp icon component
@@ -23,6 +26,8 @@ const BookingCard = ({ booking }: { booking: Booking }) => {
   const navigate = useNavigate();
   const { data: existingReview } = useBookingReview(booking.id);
   const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const cancelBooking = useCancelBooking();
 
   const formatDate = (dateStr: string) => {
     return format(new Date(dateStr), "EEE, MMM d, yyyy");
@@ -64,7 +69,20 @@ const BookingCard = ({ booking }: { booking: Booking }) => {
     }
   };
 
+  const handleCancelBooking = async (reason: string) => {
+    if (!booking.rides) return;
+    
+    await cancelBooking.mutateAsync({
+      bookingId: booking.id,
+      rideId: booking.ride_id,
+      seatsBooked: booking.seats_booked,
+      seatType: booking.seat_type as 'front' | 'back',
+      reason,
+    });
+  };
+
   const canReview = booking.status === "confirmed" && !existingReview;
+  const canCancel = booking.status === "pending" || booking.status === "confirmed";
   const seatTypeLabel = booking.seat_type === 'front' ? 'Front' : 'Back';
 
   return (
@@ -105,7 +123,7 @@ const BookingCard = ({ booking }: { booking: Booking }) => {
                   </p>
                 </div>
                 
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex-wrap justify-end">
                   {booking.status === "confirmed" && driverPhone && (
                     <>
                       <Button 
@@ -124,6 +142,18 @@ const BookingCard = ({ booking }: { booking: Booking }) => {
                         <Phone className="h-4 w-4" />
                       </Button>
                     </>
+                  )}
+                  
+                  {canCancel && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-destructive hover:text-destructive"
+                      onClick={() => setCancelDialogOpen(true)}
+                    >
+                      <XCircle className="h-4 w-4 mr-1" />
+                      Cancel
+                    </Button>
                   )}
                   
                   {canReview && (
@@ -159,6 +189,17 @@ const BookingCard = ({ booking }: { booking: Booking }) => {
           )}
         </div>
       </CardContent>
+
+      <CancelBookingDialog
+        open={cancelDialogOpen}
+        onOpenChange={setCancelDialogOpen}
+        onConfirm={handleCancelBooking}
+        bookingDetails={{
+          origin: booking.rides?.origin,
+          destination: booking.rides?.destination,
+          seats: booking.seats_booked,
+        }}
+      />
     </Card>
   );
 };
@@ -213,6 +254,8 @@ const MyBookings = () => {
           </div>
         )}
       </div>
+
+      <EmergencyContactButton />
     </div>
   );
 };

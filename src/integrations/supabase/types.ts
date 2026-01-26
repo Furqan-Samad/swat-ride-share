@@ -16,6 +16,8 @@ export type Database = {
     Tables: {
       bookings: {
         Row: {
+          cancellation_reason: string | null
+          cancelled_at: string | null
           created_at: string
           id: string
           passenger_id: string
@@ -26,6 +28,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
           created_at?: string
           id?: string
           passenger_id: string
@@ -36,6 +40,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
           created_at?: string
           id?: string
           passenger_id?: string
@@ -62,10 +68,63 @@ export type Database = {
           },
         ]
       }
+      notifications: {
+        Row: {
+          created_at: string
+          id: string
+          is_read: boolean | null
+          message: string
+          related_booking_id: string | null
+          related_ride_id: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_read?: boolean | null
+          message: string
+          related_booking_id?: string | null
+          related_ride_id?: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_read?: boolean | null
+          message?: string
+          related_booking_id?: string | null
+          related_ride_id?: string | null
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_related_booking_id_fkey"
+            columns: ["related_booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_related_ride_id_fkey"
+            columns: ["related_ride_id"]
+            isOneToOne: false
+            referencedRelation: "rides"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
           created_at: string
+          emergency_contact: string | null
+          emergency_contact_name: string | null
           full_name: string | null
           id: string
           is_driver: boolean | null
@@ -76,6 +135,8 @@ export type Database = {
         Insert: {
           avatar_url?: string | null
           created_at?: string
+          emergency_contact?: string | null
+          emergency_contact_name?: string | null
           full_name?: string | null
           id: string
           is_driver?: boolean | null
@@ -86,6 +147,8 @@ export type Database = {
         Update: {
           avatar_url?: string | null
           created_at?: string
+          emergency_contact?: string | null
+          emergency_contact_name?: string | null
           full_name?: string | null
           id?: string
           is_driver?: boolean | null
