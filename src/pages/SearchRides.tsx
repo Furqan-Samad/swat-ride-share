@@ -1,12 +1,12 @@
 import { useState } from "react";
-import { Search, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import Header from "@/components/Header";
 import RideCard from "@/components/RideCard";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useRides } from "@/hooks/useRides";
 import { useRealtimeRides } from "@/hooks/useRealtimeRides";
 import { format } from "date-fns";
+import { LocationPicker } from "@/components/LocationPicker";
 
 const SearchRides = () => {
   const [from, setFrom] = useState("Swat");
@@ -50,30 +50,22 @@ const SearchRides = () => {
       <div className="container py-8 px-4">
         <h1 className="mb-8 text-3xl font-bold">Find Your Ride</h1>
 
-        {/* Search Filters */}
+        {/* Search Filters with Location Picker */}
         <div className="mb-8 rounded-2xl bg-card p-6 shadow-card">
           <div className="grid gap-4 md:grid-cols-3">
-            <div className="relative">
-              <Search className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
-              <Input
-                placeholder="From"
-                value={from}
-                onChange={(e) => setFrom(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-            <div className="relative">
-              <Search className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
-              <Input
-                placeholder="To"
-                value={to}
-                onChange={(e) => setTo(e.target.value)}
-                className="pl-10"
-              />
-            </div>
+            <LocationPicker
+              value={from}
+              onChange={(value) => setFrom(value)}
+              placeholder="From (e.g., Swat)"
+            />
+            <LocationPicker
+              value={to}
+              onChange={(value) => setTo(value)}
+              placeholder="To (e.g., Islamabad)"
+            />
             <Button 
               onClick={handleSearch}
-              className="bg-gradient-hero hover:opacity-90 transition-opacity"
+              className="bg-gradient-hero hover:opacity-90 transition-opacity h-10 self-end"
             >
               Search
             </Button>
