@@ -17,6 +17,8 @@ interface LocationPickerProps {
   onChange: (value: string, coordinates?: { lat: number; lng: number }) => void;
   placeholder?: string;
   label?: string;
+  onDistanceCalculated?: (distance: { text: string; value: number } | null) => void;
+  compareWithCoords?: { lat: number; lng: number };
 }
 
 interface Suggestion {
@@ -36,6 +38,8 @@ export const LocationPicker = ({
   onChange,
   placeholder = "Enter location",
   label,
+  onDistanceCalculated,
+  compareWithCoords,
 }: LocationPickerProps) => {
   const { toast } = useToast();
   const [inputValue, setInputValue] = useState(value);

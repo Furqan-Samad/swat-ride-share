@@ -45,25 +45,35 @@ export const useRides = (from?: string, to?: string) => {
   return useQuery({
     queryKey: ["rides", from, to],
     queryFn: async () => {
-      let query = supabase
-        .from("rides")
-        .select("*, driver:profiles!rides_driver_id_fkey(full_name, avatar_url)")
-        .eq("status", "active")
-        .order("departure_date", { ascending: true });
+      try {
+        let query = supabase
+          .from("rides")
+          .select("*, driver:profiles!rides_driver_id_fkey(full_name, avatar_url)")
+          .eq("status", "active")
+          .order("departure_date", { ascending: true });
 
-      if (from) {
-        const sanitizedFrom = sanitizeSearchInput(from);
-        query = query.ilike("origin", `%${sanitizedFrom}%`);
-      }
-      if (to) {
-        const sanitizedTo = sanitizeSearchInput(to);
-        query = query.ilike("destination", `%${sanitizedTo}%`);
-      }
+        if (from) {
+          const sanitizedFrom = sanitizeSearchInput(from);
+          query = query.ilike("origin", `%${sanitizedFrom}%`);
+        }
+        if (to) {
+          const sanitizedTo = sanitizeSearchInput(to);
+          query = query.ilike("destination", `%${sanitizedTo}%`);
+        }
 
-      const { data, error } = await query;
-      if (error) throw error;
-      return data as Ride[];
+        const { data, error } = await query;
+        if (error) {
+          console.error("Error fetching rides:", error);
+          throw new Error("Failed to fetch rides. Please try again.");
+        }
+        return data as Ride[];
+      } catch (err) {
+        console.error("Unexpected error in useRides:", err);
+        throw err;
+      }
     },
+    retry: 2,
+    staleTime: 30000, // 30 seconds
   });
 };
 
@@ -200,17 +210,36 @@ export const useCreateBooking = () => {
 
   return useMutation({
     mutationFn: async ({ rideId, seats, seatType }: { rideId: string; seats: number; seatType: 'front' | 'back' }) => {
+      // Validate inputs
+      if (!rideId || typeof rideId !== 'string') {
+        throw new Error("Invalid ride ID");
+      }
+      if (!seats || seats < 1) {
+        throw new Error("Must book at least 1 seat");
+      }
+      if (!['front', 'back'].includes(seatType)) {
+        throw new Error("Invalid seat type");
+      }
+
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("You must be logged in to book a ride");
 
       // First check seat availability
       const { data: ride, error: rideError } = await supabase
         .from("rides")
-        .select("front_seats_available, back_seats_available")
+        .select("front_seats_available, back_seats_available, driver_id")
         .eq("id", rideId)
         .single();
 
-      if (rideError) throw rideError;
+      if (rideError) {
+        console.error("Error fetching ride:", rideError);
+        throw new Error("Failed to fetch ride details. Please try again.");
+      }
+
+      // Prevent self-booking
+      if (ride.driver_id === user.id) {
+        throw new Error("You cannot book your own ride");
+      }
 
       const availableSeats = seatType === 'front' 
         ? (ride.front_seats_available ?? 0) 
@@ -232,19 +261,27 @@ export const useCreateBooking = () => {
         .select()
         .single();
       
-      if (error) throw error;
+      if (error) {
+        console.error("Error creating booking:", error);
+        throw new Error("Failed to create booking. Please try again.");
+      }
 
       // Update seat availability on the ride
       const updateField = seatType === 'front' ? 'front_seats_available' : 'back_seats_available';
       const newAvailable = availableSeats - seats;
       
-      await supabase
+      const { error: updateError } = await supabase
         .from("rides")
         .update({ 
           [updateField]: newAvailable,
           available_seats: (ride.front_seats_available ?? 0) + (ride.back_seats_available ?? 0) - seats
         })
         .eq("id", rideId);
+
+      if (updateError) {
+        console.error("Error updating seat availability:", updateError);
+        // Don't throw - booking was created successfully
+      }
 
       // Send WhatsApp notification (fire and forget - don't block booking)
       try {
@@ -273,5 +310,6 @@ export const useCreateBooking = () => {
     onError: (error: Error) => {
       toast({ title: "Booking Failed", description: error.message, variant: "destructive" });
     },
+    retry: 1,
   });
 };
