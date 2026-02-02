@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { MapPin, Calendar, Users, DollarSign, Loader2, Armchair } from "lucide-react";
+import { Calendar, Users, DollarSign, Loader2, Armchair } from "lucide-react";
 import Header from "@/components/Header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useCreateRide } from "@/hooks/useRides";
+import { LocationPicker } from "@/components/LocationPicker";
 
 const PostRide = () => {
   const navigate = useNavigate();
@@ -107,28 +108,20 @@ const PostRide = () => {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Route */}
+              {/* Route with Google Maps */}
               <div className="space-y-4">
-                <div className="relative">
-                  <MapPin className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
-                  <Input
-                    placeholder="From"
-                    value={from}
-                    onChange={(e) => setFrom(e.target.value)}
-                    className="pl-10"
-                    required
-                  />
-                </div>
-                <div className="relative">
-                  <MapPin className="absolute left-3 top-3 h-5 w-5 text-accent" />
-                  <Input
-                    placeholder="To (e.g., Islamabad, Peshawar, Lahore)"
-                    value={to}
-                    onChange={(e) => setTo(e.target.value)}
-                    className="pl-10"
-                    required
-                  />
-                </div>
+                <LocationPicker
+                  value={from}
+                  onChange={(value) => setFrom(value)}
+                  placeholder="From (e.g., Swat, Mingora)"
+                  label="Pickup Location"
+                />
+                <LocationPicker
+                  value={to}
+                  onChange={(value) => setTo(value)}
+                  placeholder="To (e.g., Islamabad, Peshawar, Lahore)"
+                  label="Drop-off Location"
+                />
               </div>
 
               {/* Date & Time */}
