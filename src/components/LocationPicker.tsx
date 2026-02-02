@@ -221,9 +221,9 @@ export const LocationPicker = ({
       {/* Suggestions dropdown */}
       {showSuggestions && suggestions.length > 0 && (
         <Card className="absolute z-50 w-full mt-1 py-2 max-h-60 overflow-auto shadow-lg">
-          {suggestions.map((suggestion) => (
+          {suggestions.map((suggestion, index) => (
             <button
-              key={suggestion.place_id}
+              key={`${suggestion.place_id}-${index}`}
               className="w-full px-4 py-2 text-left text-sm hover:bg-muted flex items-start gap-2"
               onClick={() => handleSelectSuggestion(suggestion)}
             >
