@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { MapPin, Calendar, Users, MessageCircle, Loader2, Minus, Plus } from "lucide-react";
+import { MapPin, Calendar, Users, MessageCircle, Loader2, Minus, Plus, Navigation, Clock } from "lucide-react";
 import Header from "@/components/Header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -15,6 +15,8 @@ import DriverRating from "@/components/DriverRating";
 import ReviewList from "@/components/ReviewList";
 import { useRealtimeRides } from "@/hooks/useRealtimeRides";
 import { WhatsAppContactButton } from "@/components/WhatsAppContactButton";
+import { MapPreview } from "@/components/MapPreview";
+import { generateRideReference } from "@/lib/idGenerator";
 
 const RideDetails = () => {
   const { id } = useParams();
@@ -206,6 +208,29 @@ const RideDetails = () => {
                     <p className="text-muted-foreground">{ride.description}</p>
                   </div>
                 )}
+
+                {/* Map Preview */}
+                <div className="mt-6">
+                  <h3 className="font-semibold mb-3 flex items-center gap-2">
+                    <Navigation className="h-4 w-4 text-primary" />
+                    Route Map
+                  </h3>
+                  <MapPreview 
+                    origin={ride.origin} 
+                    destination={ride.destination} 
+                    showRoute={true}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Ride Reference */}
+            <Card className="bg-muted/30">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Ride Reference</span>
+                  <span className="font-mono font-semibold text-primary">{generateRideReference(ride.id)}</span>
+                </div>
               </CardContent>
             </Card>
           </div>

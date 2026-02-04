@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Ticket, Calendar, MapPin, Loader2, Star, XCircle } from "lucide-react";
+import { Ticket, Calendar, MapPin, Loader2, Star, XCircle, Copy, Check } from "lucide-react";
 import Header from "@/components/Header";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -15,13 +15,23 @@ import { CancelBookingDialog } from "@/components/CancelBookingDialog";
 import { EmergencyContactButton } from "@/components/EmergencyContactButton";
 import { WhatsAppContactButton } from "@/components/WhatsAppContactButton";
 import { format } from "date-fns";
+import { generateBookingReference } from "@/lib/idGenerator";
+import { useRealtimeRides } from "@/hooks/useRealtimeRides";
 
 const BookingCard = ({ booking }: { booking: Booking }) => {
   const navigate = useNavigate();
   const { data: existingReview } = useBookingReview(booking.id);
   const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
   const cancelBooking = useCancelBooking();
+  const bookingRef = generateBookingReference(booking.id);
+
+  const copyBookingRef = async () => {
+    await navigator.clipboard.writeText(bookingRef);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   const formatDate = (dateStr: string) => {
     return format(new Date(dateStr), "EEE, MMM d, yyyy");
@@ -71,12 +81,22 @@ const BookingCard = ({ booking }: { booking: Booking }) => {
       <CardContent className="p-6">
         <div className="flex flex-col gap-4">
           <div className="flex items-center justify-between">
-            <Badge variant={getStatusColor(booking.status)}>
-              {booking.status}
-            </Badge>
-            <span className="text-sm text-muted-foreground">
-              {booking.seats_booked} {seatTypeLabel} seat(s)
-            </span>
+            <div className="flex items-center gap-2">
+              <Badge variant={getStatusColor(booking.status)}>
+                {booking.status}
+              </Badge>
+              <span className="text-sm text-muted-foreground">
+                {booking.seats_booked} {seatTypeLabel} seat(s)
+              </span>
+            </div>
+            <button 
+              onClick={copyBookingRef}
+              className="flex items-center gap-1 text-xs font-mono bg-muted px-2 py-1 rounded hover:bg-muted/80 transition-colors"
+              title="Click to copy"
+            >
+              {copied ? <Check className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3" />}
+              {bookingRef}
+            </button>
           </div>
           
           {booking.rides && (
@@ -179,6 +199,9 @@ const MyBookings = () => {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
   const { data: bookings, isLoading } = useMyBookings();
+
+  // Enable real-time updates for booking changes
+  useRealtimeRides();
 
   useEffect(() => {
     if (!authLoading && !user) {
