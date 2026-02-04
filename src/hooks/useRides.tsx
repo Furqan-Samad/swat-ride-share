@@ -2,6 +2,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { sanitizeSearchInput } from "@/lib/sanitize";
+import { bookingFormSchema } from "@/lib/validation";
+import { generateBookingReference } from "@/lib/idGenerator";
 
 export interface Ride {
   id: string;
@@ -210,30 +212,26 @@ export const useCreateBooking = () => {
 
   return useMutation({
     mutationFn: async ({ rideId, seats, seatType }: { rideId: string; seats: number; seatType: 'front' | 'back' }) => {
-      // Validate inputs
-      if (!rideId || typeof rideId !== 'string') {
-        throw new Error("Invalid ride ID");
-      }
-      if (!seats || seats < 1) {
-        throw new Error("Must book at least 1 seat");
-      }
-      if (!['front', 'back'].includes(seatType)) {
-        throw new Error("Invalid seat type");
+      // Validate inputs using Zod schema
+      const validationResult = bookingFormSchema.safeParse({ rideId, seats, seatType });
+      if (!validationResult.success) {
+        throw new Error(validationResult.error.errors[0]?.message || "Invalid booking data");
       }
 
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("You must be logged in to book a ride");
 
-      // First check seat availability
+      // Fetch ride with optimistic locking check
       const { data: ride, error: rideError } = await supabase
         .from("rides")
-        .select("front_seats_available, back_seats_available, driver_id")
+        .select("front_seats_available, back_seats_available, driver_id, status, updated_at")
         .eq("id", rideId)
+        .eq("status", "active")
         .single();
 
       if (rideError) {
         console.error("Error fetching ride:", rideError);
-        throw new Error("Failed to fetch ride details. Please try again.");
+        throw new Error("Ride not found or no longer available");
       }
 
       // Prevent self-booking
@@ -241,12 +239,26 @@ export const useCreateBooking = () => {
         throw new Error("You cannot book your own ride");
       }
 
+      // Check seat availability with exact count
       const availableSeats = seatType === 'front' 
         ? (ride.front_seats_available ?? 0) 
         : (ride.back_seats_available ?? 0);
 
       if (seats > availableSeats) {
-        throw new Error(`Only ${availableSeats} ${seatType} seat(s) available`);
+        throw new Error(`Only ${availableSeats} ${seatType} seat(s) available. Please refresh and try again.`);
+      }
+
+      // Check for existing pending/confirmed booking by same user for same ride
+      const { data: existingBooking } = await supabase
+        .from("bookings")
+        .select("id, status")
+        .eq("ride_id", rideId)
+        .eq("passenger_id", user.id)
+        .in("status", ["pending", "confirmed"])
+        .maybeSingle();
+
+      if (existingBooking) {
+        throw new Error(`You already have a ${existingBooking.status} booking for this ride`);
       }
 
       // Create booking
@@ -263,27 +275,31 @@ export const useCreateBooking = () => {
       
       if (error) {
         console.error("Error creating booking:", error);
+        if (error.code === '23505') {
+          throw new Error("A booking for this ride already exists");
+        }
         throw new Error("Failed to create booking. Please try again.");
       }
 
-      // Update seat availability on the ride
+      // Update seat availability on the ride atomically
       const updateField = seatType === 'front' ? 'front_seats_available' : 'back_seats_available';
       const newAvailable = availableSeats - seats;
+      const totalSeats = (ride.front_seats_available ?? 0) + (ride.back_seats_available ?? 0) - seats;
       
       const { error: updateError } = await supabase
         .from("rides")
         .update({ 
           [updateField]: newAvailable,
-          available_seats: (ride.front_seats_available ?? 0) + (ride.back_seats_available ?? 0) - seats
+          available_seats: totalSeats
         })
         .eq("id", rideId);
 
       if (updateError) {
         console.error("Error updating seat availability:", updateError);
-        // Don't throw - booking was created successfully
+        // Booking was created, log but don't fail
       }
 
-      // Send WhatsApp notification (fire and forget - don't block booking)
+      // Send WhatsApp notification (fire and forget)
       try {
         const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID || 'bpoynxqqumbsstfgrjqg';
         fetch(`https://${projectId}.supabase.co/functions/v1/send-whatsapp-notification`, {
@@ -298,18 +314,21 @@ export const useCreateBooking = () => {
         console.error('Failed to send WhatsApp notification:', notifError);
       }
 
-      return data;
+      return { ...data, reference: generateBookingReference(data.id) };
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["rides"] });
       queryClient.invalidateQueries({ queryKey: ["ridesWithDriver"] });
       queryClient.invalidateQueries({ queryKey: ["rideWithDriver"] });
       queryClient.invalidateQueries({ queryKey: ["myBookings"] });
-      toast({ title: "Booking Requested!", description: "The driver will be notified via WhatsApp" });
+      toast({ 
+        title: "Booking Requested!", 
+        description: `Reference: ${data.reference}. The driver will be notified.` 
+      });
     },
     onError: (error: Error) => {
       toast({ title: "Booking Failed", description: error.message, variant: "destructive" });
     },
-    retry: 1,
+    retry: 0, // Don't retry bookings to prevent duplicates
   });
 };
