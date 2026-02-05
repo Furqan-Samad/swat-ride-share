@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Card } from "@/components/ui/card";
-import { MapPin, Navigation, Clock, Loader2 } from "lucide-react";
+import { MapPin, Navigation, Clock, Loader2, AlertCircle } from "lucide-react";
 
 interface MapPreviewProps {
   origin: string;
@@ -22,6 +22,12 @@ const isGoogleMapsLoaded = (): boolean => {
     window.google?.maps !== undefined;
 };
 
+// Check if billing is enabled (Google Maps API)
+const checkBillingEnabled = (): boolean => {
+  // We can't directly check billing, but we can handle the error gracefully
+  return true;
+};
+
 export const MapPreview = ({
   origin,
   destination,
@@ -35,6 +41,7 @@ export const MapPreview = ({
   const [routeInfo, setRouteInfo] = useState<RouteInfo | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [billingError, setBillingError] = useState(false);
 
   useEffect(() => {
     if (!mapRef.current || !isGoogleMapsLoaded()) {
@@ -43,17 +50,26 @@ export const MapPreview = ({
       return;
     }
 
-    // Initialize map centered on Pakistan
-    const mapInstance = new google.maps.Map(mapRef.current, {
-      zoom: 7,
-      center: { lat: 33.6844, lng: 73.0479 }, // Islamabad
-      mapTypeControl: false,
-      streetViewControl: false,
-      fullscreenControl: false,
-    });
+    try {
+      // Initialize map centered on Pakistan
+      const mapInstance = new google.maps.Map(mapRef.current, {
+        zoom: 7,
+        center: { lat: 33.6844, lng: 73.0479 }, // Islamabad
+        mapTypeControl: false,
+        streetViewControl: false,
+        fullscreenControl: false,
+      });
 
-    setMap(mapInstance);
-    setIsLoading(false);
+      setMap(mapInstance);
+      setIsLoading(false);
+    } catch (err: any) {
+      console.error("Map initialization error:", err);
+      if (err.message?.includes("BillingNotEnabled")) {
+        setBillingError(true);
+      }
+      setError("Could not load map");
+      setIsLoading(false);
+    }
   }, []);
 
   useEffect(() => {
@@ -75,10 +91,31 @@ export const MapPreview = ({
         geocoder.geocode(
           { address: address + ", Pakistan" },
           (results, status) => {
-            if (status === "OK" && results?.[0]) {
+            if (status === google.maps.GeocoderStatus.OK && results?.[0]) {
               resolve(results[0].geometry.location);
+            } else if (status === google.maps.GeocoderStatus.REQUEST_DENIED) {
+              setBillingError(true);
+              reject(new Error("Maps API billing not enabled"));
             } else {
-              reject(new Error(`Geocode failed for ${address}`));
+              // Fallback: try to use known city coordinates
+              const knownLocations: Record<string, { lat: number; lng: number }> = {
+                "swat": { lat: 35.2227, lng: 72.4258 },
+                "islamabad": { lat: 33.6844, lng: 73.0479 },
+                "peshawar": { lat: 34.0151, lng: 71.5249 },
+                "lahore": { lat: 31.5204, lng: 74.3587 },
+                "karachi": { lat: 24.8607, lng: 67.0011 },
+                "rawalpindi": { lat: 33.5651, lng: 73.0169 },
+                "mingora": { lat: 34.7717, lng: 72.3600 },
+              };
+              
+              const normalizedAddress = address.toLowerCase().trim();
+              for (const [city, coords] of Object.entries(knownLocations)) {
+                if (normalizedAddress.includes(city)) {
+                  resolve(new google.maps.LatLng(coords.lat, coords.lng));
+                  return;
+                }
+              }
+              reject(new Error(`Could not locate ${address}`));
             }
           }
         );
@@ -160,7 +197,8 @@ export const MapPreview = ({
           map.fitBounds(bounds);
         }
       } catch (err) {
-        console.error("Error displaying route:", err);
+        console.warn("Error displaying route:", err);
+        // Don't show error to user for geocoding failures
       }
     };
 
@@ -173,22 +211,35 @@ export const MapPreview = ({
     };
   }, [map, origin, destination, originCoords, destinationCoords, showRoute]);
 
-  if (error) {
+  if (error || billingError) {
     return (
-      <Card className={`p-4 bg-muted/50 ${className}`}>
-        <div className="flex items-center justify-center gap-2 text-muted-foreground">
-          <MapPin className="h-4 w-4" />
-          <span className="text-sm">Map preview unavailable</span>
+      <Card className={`p-4 bg-muted/30 ${className}`}>
+        <div className="flex flex-col items-center gap-2 text-muted-foreground">
+          <div className="flex items-center gap-2">
+            <MapPin className="h-4 w-4 text-primary" />
+            <span className="text-sm font-medium">Route Information</span>
+          </div>
         </div>
-        <div className="mt-2 text-center">
-          <p className="text-sm font-medium">{origin}</p>
+        <div className="mt-3 text-center space-y-2">
+          <div className="flex items-center justify-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-green-500" />
+            <p className="text-sm font-medium">{origin}</p>
+          </div>
           {destination && (
             <>
-              <span className="text-muted-foreground">→</span>
-              <p className="text-sm font-medium">{destination}</p>
+              <div className="text-muted-foreground">↓</div>
+              <div className="flex items-center justify-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-red-500" />
+                <p className="text-sm font-medium">{destination}</p>
+              </div>
             </>
           )}
         </div>
+        {billingError && (
+          <p className="text-xs text-muted-foreground text-center mt-3">
+            Interactive map requires Google Maps billing
+          </p>
+        )}
       </Card>
     );
   }

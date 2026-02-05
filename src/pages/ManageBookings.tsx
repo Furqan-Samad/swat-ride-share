@@ -1,6 +1,7 @@
 import { useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Users, Calendar, MapPin, Loader2, Check, X, Phone } from "lucide-react";
+import { Users, Calendar, MapPin, Loader2, Check, X, Phone, MessageCircle, Navigation } from "lucide-react";
 import Header from "@/components/Header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -8,13 +9,104 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/useAuth";
 import { useDriverBookingRequests, useUpdateBookingStatus } from "@/hooks/useBookingManagement";
+import { WhatsAppContactButton } from "@/components/WhatsAppContactButton";
+import { LiveLocationMap } from "@/components/LiveLocationMap";
+import { useRealtimeBookings } from "@/hooks/useRealtimeBookings";
 import { format } from "date-fns";
+
+// Individual booking card component with live location toggle
+const BookingCard = ({ booking, formatDate, formatTime, getStatusColor, updateStatus }: any) => {
+  const [showLiveLocation, setShowLiveLocation] = useState(false);
+  const isToday = booking.ride && new Date(booking.ride.departure_date).toDateString() === new Date().toDateString();
+  const canShowLiveLocation = booking.status === "confirmed" && isToday;
+
+  return (
+    <Card key={booking.id}>
+      <CardContent className="p-6">
+        <div className="flex flex-col md:flex-row md:items-center gap-4">
+          <div className="flex items-center gap-3 flex-1">
+            <Avatar className="h-10 w-10">
+              <AvatarImage src={booking.passenger?.avatar_url || undefined} />
+              <AvatarFallback>
+                {booking.passenger?.full_name?.charAt(0) || "P"}
+              </AvatarFallback>
+            </Avatar>
+            <div>
+              <p className="font-medium">
+                {booking.passenger?.full_name || "Passenger"}
+              </p>
+              <p className="text-sm text-muted-foreground">
+                {booking.seats_booked} seat(s)
+              </p>
+            </div>
+          </div>
+
+          {booking.ride && (
+            <div className="flex-1 text-sm text-muted-foreground">
+              <span>{booking.ride.origin} → {booking.ride.destination}</span>
+            </div>
+          )}
+
+          <div className="flex items-center gap-2 flex-wrap">
+            <Badge variant={getStatusColor(booking.status)}>
+              {booking.status}
+            </Badge>
+            
+            {canShowLiveLocation && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowLiveLocation(!showLiveLocation)}
+                className={showLiveLocation ? "bg-primary/10" : ""}
+              >
+                <Navigation className="h-4 w-4 mr-1" />
+                {showLiveLocation ? "Hide" : "Track"}
+              </Button>
+            )}
+            
+            {booking.status === "confirmed" && booking.passenger?.phone_number && (
+              <>
+                <WhatsAppContactButton
+                  phoneNumber={booking.passenger.phone_number}
+                  message={`Hi! About your booking on my ride from ${booking.ride?.origin} to ${booking.ride?.destination}`}
+                  size="sm"
+                  showLabel={false}
+                  showFallbackCall={false}
+                />
+                <Button variant="outline" size="sm" asChild>
+                  <a href={`tel:${booking.passenger.phone_number}`}>
+                    <Phone className="h-4 w-4" />
+                  </a>
+                </Button>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Live Location Map for Driver */}
+        {showLiveLocation && canShowLiveLocation && booking.ride && (
+          <div className="mt-4 pt-4 border-t">
+            <LiveLocationMap
+              bookingId={booking.id}
+              isDriver={true}
+              pickupLocation={booking.ride.origin}
+              dropLocation={booking.ride.destination}
+            />
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+};
 
 const ManageBookings = () => {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
   const { data: bookings, isLoading } = useDriverBookingRequests();
   const updateStatus = useUpdateBookingStatus();
+
+  // Enable real-time updates for booking changes
+  useRealtimeBookings();
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -140,48 +232,14 @@ const ManageBookings = () => {
             <h2 className="text-xl font-semibold mb-4">Past Requests</h2>
             <div className="space-y-4">
               {otherBookings.map((booking) => (
-                <Card key={booking.id}>
-                  <CardContent className="p-6">
-                    <div className="flex flex-col md:flex-row md:items-center gap-4">
-                      <div className="flex items-center gap-3 flex-1">
-                        <Avatar className="h-10 w-10">
-                          <AvatarImage src={booking.passenger?.avatar_url || undefined} />
-                          <AvatarFallback>
-                            {booking.passenger?.full_name?.charAt(0) || "P"}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <p className="font-medium">
-                            {booking.passenger?.full_name || "Passenger"}
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                            {booking.seats_booked} seat(s)
-                          </p>
-                        </div>
-                      </div>
-
-                      {booking.ride && (
-                        <div className="flex-1 text-sm text-muted-foreground">
-                          <span>{booking.ride.origin} → {booking.ride.destination}</span>
-                        </div>
-                      )}
-
-                      <div className="flex items-center gap-3">
-                        <Badge variant={getStatusColor(booking.status)}>
-                          {booking.status}
-                        </Badge>
-                        {booking.status === "confirmed" && booking.passenger?.phone_number && (
-                          <Button variant="outline" size="sm" asChild>
-                            <a href={`tel:${booking.passenger.phone_number}`}>
-                              <Phone className="h-4 w-4 mr-1" />
-                              Call
-                            </a>
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                <BookingCard 
+                  key={booking.id}
+                  booking={booking}
+                  formatDate={formatDate}
+                  formatTime={formatTime}
+                  getStatusColor={getStatusColor}
+                  updateStatus={updateStatus}
+                />
               ))}
             </div>
           </div>

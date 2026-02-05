@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Ticket, Calendar, MapPin, Loader2, Star, XCircle, Copy, Check } from "lucide-react";
+import { Ticket, Calendar, MapPin, Loader2, Star, XCircle, Copy, Check, Navigation } from "lucide-react";
 import Header from "@/components/Header";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -14,6 +14,7 @@ import ReviewForm from "@/components/ReviewForm";
 import { CancelBookingDialog } from "@/components/CancelBookingDialog";
 import { EmergencyContactButton } from "@/components/EmergencyContactButton";
 import { WhatsAppContactButton } from "@/components/WhatsAppContactButton";
+import { LiveLocationMap } from "@/components/LiveLocationMap";
 import { format } from "date-fns";
 import { generateBookingReference } from "@/lib/idGenerator";
 import { useRealtimeRides } from "@/hooks/useRealtimeRides";
@@ -24,6 +25,7 @@ const BookingCard = ({ booking }: { booking: Booking }) => {
   const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [showLiveLocation, setShowLiveLocation] = useState(false);
   const cancelBooking = useCancelBooking();
   const bookingRef = generateBookingReference(booking.id);
 
@@ -75,6 +77,8 @@ const BookingCard = ({ booking }: { booking: Booking }) => {
   const canReview = booking.status === "confirmed" && !existingReview;
   const canCancel = booking.status === "pending" || booking.status === "confirmed";
   const seatTypeLabel = booking.seat_type === 'front' ? 'Front' : 'Back';
+  const isToday = booking.rides && new Date(booking.rides.departure_date).toDateString() === new Date().toDateString();
+  const canShowLiveLocation = booking.status === "confirmed" && isToday;
 
   return (
     <Card className="hover:shadow-lg transition-shadow">
@@ -125,6 +129,18 @@ const BookingCard = ({ booking }: { booking: Booking }) => {
                 </div>
                 
                 <div className="flex gap-2 flex-wrap justify-end">
+                  {canShowLiveLocation && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowLiveLocation(!showLiveLocation)}
+                      className={showLiveLocation ? "bg-primary/10" : ""}
+                    >
+                      <Navigation className="h-4 w-4 mr-1" />
+                      {showLiveLocation ? "Hide Map" : "Live Track"}
+                    </Button>
+                  )}
+
                   {booking.status === "confirmed" && driverPhone && (
                     <WhatsAppContactButton
                       phoneNumber={driverPhone}
@@ -176,6 +192,18 @@ const BookingCard = ({ booking }: { booking: Booking }) => {
                   )}
                 </div>
               </div>
+
+              {/* Live Location Map */}
+              {showLiveLocation && canShowLiveLocation && booking.rides && (
+                <div className="pt-4 border-t">
+                  <LiveLocationMap
+                    bookingId={booking.id}
+                    isDriver={false}
+                    pickupLocation={booking.rides.origin}
+                    dropLocation={booking.rides.destination}
+                  />
+                </div>
+              )}
             </>
           )}
         </div>
