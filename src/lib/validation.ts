@@ -12,6 +12,13 @@ export const phoneSchema = z
     message: "Enter a valid Pakistani phone number (e.g., 03001234567 or +923001234567)",
   });
 
+// Cancellation reason validation
+export const cancellationReasonSchema = z
+  .string()
+  .trim()
+  .min(3, { message: "Please provide a reason for cancellation" })
+  .max(500, { message: "Reason must be less than 500 characters" });
+
 // Location validation
 export const locationSchema = z
   .string()

@@ -258,7 +258,11 @@ export const useCreateBooking = () => {
         .maybeSingle();
 
       if (existingBooking) {
-        throw new Error(`You already have a ${existingBooking.status} booking for this ride`);
+        throw new Error(
+          existingBooking.status === "pending"
+            ? "You already have a pending booking for this ride. Please wait for the driver to confirm."
+            : "You already have a confirmed booking for this ride."
+        );
       }
 
       // Create booking
@@ -276,7 +280,18 @@ export const useCreateBooking = () => {
       if (error) {
         console.error("Error creating booking:", error);
         if (error.code === '23505') {
-          throw new Error("A booking for this ride already exists");
+          // Check if they have any existing booking
+          const { data: anyExisting } = await supabase
+            .from("bookings")
+            .select("status")
+            .eq("ride_id", rideId)
+            .eq("passenger_id", user.id)
+            .maybeSingle();
+          
+          if (anyExisting?.status === "cancelled") {
+            throw new Error("You previously cancelled a booking for this ride. Please contact the driver directly if you wish to rebook.");
+          }
+          throw new Error("You already have a booking for this ride");
         }
         throw new Error("Failed to create booking. Please try again.");
       }

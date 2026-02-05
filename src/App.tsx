@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { BookingNotificationListener } from "@/components/BookingNotificationListener";
 import { NotificationListener } from "@/components/NotificationListener";
+import { EmergencyContactButton } from "@/components/EmergencyContactButton";
 import Index from "./pages/Index";
 import SearchRides from "./pages/SearchRides";
 import RideDetails from "./pages/RideDetails";
@@ -28,6 +29,7 @@ const App = () => (
       <TooltipProvider>
         <BookingNotificationListener />
         <NotificationListener />
+        <EmergencyContactButton />
         <Toaster />
         <Sonner />
         <BrowserRouter>

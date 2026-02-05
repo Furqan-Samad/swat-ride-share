@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { cancellationReasonSchema } from "@/lib/validation";
 
 export interface BookingRequest {
   id: string;
@@ -108,19 +109,70 @@ export const useCancelBooking = () => {
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: async (bookingId: string) => {
+    mutationFn: async ({ bookingId, reason }: { bookingId: string; reason?: string }) => {
+      // Validate cancellation reason if provided
+      if (reason) {
+        const validation = cancellationReasonSchema.safeParse(reason);
+        if (!validation.success) {
+          throw new Error(validation.error.errors[0]?.message || "Invalid reason");
+        }
+      }
+
+      // Get booking details first
+      const { data: booking, error: bookingError } = await supabase
+        .from("bookings")
+        .select("ride_id, seats_booked, seat_type, status")
+        .eq("id", bookingId)
+        .single();
+
+      if (bookingError) throw bookingError;
+      if (booking.status === "cancelled") {
+        throw new Error("This booking is already cancelled");
+      }
+
+      // Update booking status
       const { data, error } = await supabase
         .from("bookings")
-        .update({ status: "cancelled" })
+        .update({ 
+          status: "cancelled",
+          cancellation_reason: reason || null,
+          cancelled_at: new Date().toISOString()
+        })
         .eq("id", bookingId)
         .select()
         .single();
       
       if (error) throw error;
+
+      // Restore seat availability
+      const updateField = booking.seat_type === 'front' ? 'front_seats_available' : 'back_seats_available';
+      
+      const { data: ride } = await supabase
+        .from("rides")
+        .select("front_seats_available, back_seats_available, available_seats")
+        .eq("id", booking.ride_id)
+        .single();
+
+      if (ride) {
+        const currentSeats = booking.seat_type === 'front' 
+          ? (ride.front_seats_available ?? 0) 
+          : (ride.back_seats_available ?? 0);
+        
+        await supabase
+          .from("rides")
+          .update({
+            [updateField]: currentSeats + booking.seats_booked,
+            available_seats: (ride.available_seats ?? 0) + booking.seats_booked
+          })
+          .eq("id", booking.ride_id);
+      }
+
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["myBookings"] });
+      queryClient.invalidateQueries({ queryKey: ["rides"] });
+      queryClient.invalidateQueries({ queryKey: ["driverBookingRequests"] });
       toast({ title: "Booking Cancelled", description: "Your booking has been cancelled" });
     },
     onError: (error: Error) => {
