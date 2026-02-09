@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, RefreshCw } from "lucide-react";
 import Header from "@/components/Header";
 import RideCard from "@/components/RideCard";
 import { Button } from "@/components/ui/button";
@@ -7,14 +7,16 @@ import { useRides } from "@/hooks/useRides";
 import { useRealtimeRides } from "@/hooks/useRealtimeRides";
 import { format } from "date-fns";
 import { LocationPicker } from "@/components/LocationPicker";
+import { useQueryClient } from "@tanstack/react-query";
 
 const SearchRides = () => {
-  const [from, setFrom] = useState("Swat");
+  const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
-  const [searchFrom, setSearchFrom] = useState("Swat");
+  const [searchFrom, setSearchFrom] = useState("");
   const [searchTo, setSearchTo] = useState("");
+  const queryClient = useQueryClient();
 
-  const { data: rides, isLoading, error } = useRides(searchFrom, searchTo);
+  const { data: rides, isLoading, error, refetch, isFetching } = useRides(searchFrom, searchTo);
   
   // Enable real-time updates for seat availability
   useRealtimeRides();
@@ -22,6 +24,11 @@ const SearchRides = () => {
   const handleSearch = () => {
     setSearchFrom(from);
     setSearchTo(to);
+  };
+
+  const handleRefresh = () => {
+    queryClient.invalidateQueries({ queryKey: ["rides"] });
+    refetch();
   };
 
   const formatDate = (dateStr: string) => {
@@ -82,11 +89,20 @@ const SearchRides = () => {
             <p className="text-destructive">Failed to load rides. Please try again.</p>
           </div>
         ) : (
-          <>
+        <>
             <div className="mb-4 flex items-center justify-between">
               <p className="text-muted-foreground">
                 {rides?.length || 0} rides available
               </p>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleRefresh}
+                disabled={isFetching}
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${isFetching ? 'animate-spin' : ''}`} />
+                Refresh
+              </Button>
             </div>
 
             {rides && rides.length > 0 ? (

@@ -82,8 +82,10 @@ const PostRide = () => {
       front_seats_available: parseInt(frontSeats) || 0,
       back_seats_available: parseInt(backSeats) || 0,
       description: description || undefined,
+      status: "active", // Explicitly set status to ensure it shows
     });
 
+    // Navigate after successful creation
     navigate("/search");
   };
 
