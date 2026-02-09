@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { MapPin, Search, Loader2, Navigation } from "lucide-react";
+import { MapPin, Search, Loader2, Navigation, AlertCircle } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 
 // Declare google maps types
@@ -17,6 +18,7 @@ interface LocationPickerProps {
   onChange: (value: string, coordinates?: { lat: number; lng: number }) => void;
   placeholder?: string;
   label?: string;
+  error?: string;
   onDistanceCalculated?: (distance: { text: string; value: number } | null) => void;
   compareWithCoords?: { lat: number; lng: number };
 }
@@ -38,6 +40,7 @@ export const LocationPicker = ({
   onChange,
   placeholder = "Enter location",
   label,
+  error,
   onDistanceCalculated,
   compareWithCoords,
 }: LocationPickerProps) => {
@@ -50,6 +53,13 @@ export const LocationPicker = ({
   const autocompleteService = useRef<google.maps.places.AutocompleteService | null>(null);
   const placesService = useRef<google.maps.places.PlacesService | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Sync inputValue with external value prop
+  useEffect(() => {
+    if (value !== inputValue) {
+      setInputValue(value);
+    }
+  }, [value]);
 
   // Initialize Google Maps services
   useEffect(() => {
@@ -108,6 +118,13 @@ export const LocationPicker = ({
     return () => clearTimeout(timer);
   }, [inputValue, searchPlaces, mapsLoaded]);
 
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = e.target.value;
+    setInputValue(newValue);
+    // Always update parent state immediately for manual input
+    onChange(newValue);
+  };
+
   const handleSelectSuggestion = (suggestion: Suggestion) => {
     setInputValue(suggestion.description);
     setShowSuggestions(false);
@@ -159,17 +176,21 @@ export const LocationPicker = ({
                 setInputValue(address);
                 onChange(address, { lat: latitude, lng: longitude });
               } else {
+                const coordsString = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
+                setInputValue(coordsString);
+                onChange(coordsString, { lat: latitude, lng: longitude });
                 toast({
                   title: "Location found",
-                  description: "Could not get address for your location.",
+                  description: "Using coordinates as address lookup failed.",
                 });
-                onChange(`${latitude.toFixed(6)}, ${longitude.toFixed(6)}`, { lat: latitude, lng: longitude });
               }
             }
           );
         } else {
           setIsLoading(false);
-          onChange(`${latitude.toFixed(6)}, ${longitude.toFixed(6)}`, { lat: latitude, lng: longitude });
+          const coordsString = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
+          setInputValue(coordsString);
+          onChange(coordsString, { lat: latitude, lng: longitude });
         }
       },
       (error) => {
@@ -183,29 +204,28 @@ export const LocationPicker = ({
     );
   };
 
+  const hasError = !!error;
+
   return (
-    <div className="relative">
+    <div className="relative space-y-2">
       {label && (
-        <label className="text-sm font-medium mb-2 block">{label}</label>
+        <Label className={`text-sm font-medium ${hasError ? "text-destructive" : ""}`}>
+          {label}
+        </Label>
       )}
       <div className="relative">
-        <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <MapPin className={`absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 ${hasError ? "text-destructive" : "text-muted-foreground"}`} />
         <Input
           ref={inputRef}
           value={inputValue}
-          onChange={(e) => {
-            setInputValue(e.target.value);
-            if (!mapsLoaded) {
-              onChange(e.target.value);
-            }
-          }}
+          onChange={handleInputChange}
           onBlur={() => {
             // Delay hiding to allow click on suggestion
             setTimeout(() => setShowSuggestions(false), 200);
           }}
           onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
           placeholder={placeholder}
-          className="pl-10 pr-20"
+          className={`pl-10 pr-20 ${hasError ? "border-destructive focus-visible:ring-destructive" : ""}`}
         />
         <div className="absolute right-2 top-1/2 -translate-y-1/2 flex gap-1">
           {isLoading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
@@ -222,12 +242,21 @@ export const LocationPicker = ({
         </div>
       </div>
 
+      {/* Error message */}
+      {hasError && (
+        <p className="text-sm text-destructive flex items-center gap-1">
+          <AlertCircle className="h-3 w-3" />
+          {error}
+        </p>
+      )}
+
       {/* Suggestions dropdown */}
       {showSuggestions && suggestions.length > 0 && (
         <Card className="absolute z-50 w-full mt-1 py-2 max-h-60 overflow-auto shadow-lg">
           {suggestions.map((suggestion, index) => (
             <button
               key={`${suggestion.place_id}-${index}`}
+              type="button"
               className="w-full px-4 py-2 text-left text-sm hover:bg-muted flex items-start gap-2"
               onClick={() => handleSelectSuggestion(suggestion)}
             >
@@ -239,9 +268,9 @@ export const LocationPicker = ({
       )}
 
       {!mapsLoaded && (
-        <p className="text-xs text-muted-foreground mt-1">
+        <p className="text-xs text-muted-foreground">
           <Search className="h-3 w-3 inline mr-1" />
-          Enter location manually (Maps API not configured)
+          Enter location manually (Maps autocomplete unavailable)
         </p>
       )}
     </div>
