@@ -48,10 +48,14 @@ export const useRides = (from?: string, to?: string) => {
     queryKey: ["rides", from, to],
     queryFn: async () => {
       try {
+        // Get current date in YYYY-MM-DD format for filtering past rides
+        const today = new Date().toISOString().split('T')[0];
+        
         let query = supabase
           .from("rides")
           .select("*, driver:profiles!rides_driver_id_fkey(full_name, avatar_url)")
           .eq("status", "active")
+          .gte("departure_date", today) // Only show future rides
           .order("departure_date", { ascending: true });
 
         if (from) {
@@ -68,14 +72,23 @@ export const useRides = (from?: string, to?: string) => {
           console.error("Error fetching rides:", error);
           throw new Error("Failed to fetch rides. Please try again.");
         }
-        return data as Ride[];
+        
+        // Filter out rides with no available seats
+        const availableRides = (data || []).filter(ride => 
+          (ride.available_seats ?? 0) > 0 || 
+          ((ride as any).front_seats_available ?? 0) > 0 || 
+          ((ride as any).back_seats_available ?? 0) > 0
+        );
+        
+        return availableRides as Ride[];
       } catch (err) {
         console.error("Unexpected error in useRides:", err);
         throw err;
       }
     },
     retry: 2,
-    staleTime: 30000, // 30 seconds
+    staleTime: 10000, // 10 seconds - faster refresh for real-time updates
+    refetchOnWindowFocus: true,
   });
 };
 
@@ -182,6 +195,7 @@ export const useCreateRide = () => {
       front_seats_available?: number;
       back_seats_available?: number;
       description?: string;
+      status?: string;
     }) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("You must be logged in to post a ride");
@@ -248,7 +262,8 @@ export const useCreateBooking = () => {
         throw new Error(`Only ${availableSeats} ${seatType} seat(s) available. Please refresh and try again.`);
       }
 
-      // Check for existing pending/confirmed booking by same user for same ride
+      // Check for existing ACTIVE (pending/confirmed) booking by same user for same ride
+      // IMPORTANT: Allow rebooking if previous booking was cancelled
       const { data: existingBooking } = await supabase
         .from("bookings")
         .select("id, status")
@@ -265,14 +280,15 @@ export const useCreateBooking = () => {
         );
       }
 
-      // Create booking
+      // Create booking - this is allowed even if user has a cancelled booking for this ride
       const { data, error } = await supabase
         .from("bookings")
         .insert({ 
           ride_id: rideId, 
           passenger_id: user.id, 
           seats_booked: seats,
-          seat_type: seatType
+          seat_type: seatType,
+          status: "pending" // Explicitly set status
         })
         .select()
         .single();
@@ -280,18 +296,7 @@ export const useCreateBooking = () => {
       if (error) {
         console.error("Error creating booking:", error);
         if (error.code === '23505') {
-          // Check if they have any existing booking
-          const { data: anyExisting } = await supabase
-            .from("bookings")
-            .select("status")
-            .eq("ride_id", rideId)
-            .eq("passenger_id", user.id)
-            .maybeSingle();
-          
-          if (anyExisting?.status === "cancelled") {
-            throw new Error("You previously cancelled a booking for this ride. Please contact the driver directly if you wish to rebook.");
-          }
-          throw new Error("You already have a booking for this ride");
+          throw new Error("You already have an active booking for this ride. If you cancelled, please refresh the page and try again.");
         }
         throw new Error("Failed to create booking. Please try again.");
       }
