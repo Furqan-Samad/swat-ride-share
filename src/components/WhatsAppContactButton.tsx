@@ -68,7 +68,7 @@ export const WhatsAppContactButton = ({
       ? `https://wa.me/${formattedPhone}?text=${encodeURIComponent(message)}`
       : `https://wa.me/${formattedPhone}`;
     
-    window.open(whatsappUrl, '_blank');
+    window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
   };
 
   const handlePhoneCall = () => {
