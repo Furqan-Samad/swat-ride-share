@@ -54,19 +54,23 @@ export const useCancelBooking = () => {
 
       // 3. Send WhatsApp notification for cancellation
       try {
-        const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID || 'bpoynxqqumbsstfgrjqg';
-        await fetch(`https://${projectId}.supabase.co/functions/v1/send-whatsapp-notification`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-          },
-          body: JSON.stringify({ 
-            bookingId, 
-            notificationType: 'cancellation',
-            cancellationReason: reason 
-          }),
-        });
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token;
+        if (token) {
+          const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID || 'bpoynxqqumbsstfgrjqg';
+          await fetch(`https://${projectId}.supabase.co/functions/v1/send-whatsapp-notification`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`,
+            },
+            body: JSON.stringify({ 
+              bookingId, 
+              notificationType: 'cancellation',
+              cancellationReason: reason 
+            }),
+          });
+        }
       } catch (notifError) {
         console.error('Failed to send cancellation notification:', notifError);
       }

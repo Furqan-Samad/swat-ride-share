@@ -12,6 +12,7 @@ interface BookingData {
   status: string;
   created_at: string;
   cancellation_reason: string | null;
+  passenger_id: string;
   passenger: {
     full_name: string | null;
     phone_number: string | null;
@@ -68,11 +69,10 @@ async function sendWhatsAppMessage(phoneNumber: string, message: string): Promis
       return { success: false, error: result.error?.message || "Failed to send message" };
     }
 
-    console.log("WhatsApp message sent successfully:", result);
     return { success: true, messageId: result.messages?.[0]?.id };
   } catch (err) {
     const error = err as Error;
-    console.error("Error sending WhatsApp message:", error);
+    console.error("Error sending WhatsApp message:", error.message);
     return { success: false, error: error.message };
   }
 }
@@ -108,20 +108,46 @@ Deno.serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     const adminPhone = Deno.env.get("ADMIN_WHATSAPP_NUMBER");
 
+    // ---- Authentication ----
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(
+        JSON.stringify({ error: "Missing authorization" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+
+    const token = authHeader.replace("Bearer ", "");
+    const { data: claimsData, error: claimsError } = await supabaseAuth.auth.getClaims(token);
+    if (claimsError || !claimsData?.claims) {
+      return new Response(
+        JSON.stringify({ error: "Invalid authentication" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const userId = claimsData.claims.sub as string;
+
+    // Service role client for privileged operations
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const { bookingId, notificationType, cancellationReason } = await req.json();
 
-    if (!bookingId) {
+    if (!bookingId || typeof bookingId !== "string") {
       return new Response(
-        JSON.stringify({ error: "Booking ID is required" }),
+        JSON.stringify({ error: "Valid Booking ID is required" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Fetch booking details with related data
+    // ---- Fetch booking & authorize ----
     const { data: bookingData, error: bookingError } = await supabase
       .from("bookings")
       .select(`
@@ -131,6 +157,7 @@ Deno.serve(async (req) => {
         status,
         created_at,
         cancellation_reason,
+        passenger_id,
         passenger:profiles!bookings_passenger_id_fkey(full_name, phone_number),
         ride:rides!bookings_ride_id_fkey(
           origin,
@@ -147,7 +174,6 @@ Deno.serve(async (req) => {
       .single();
 
     if (bookingError || !bookingData) {
-      console.error("Failed to fetch booking:", bookingError);
       return new Response(
         JSON.stringify({ error: "Booking not found" }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -156,20 +182,30 @@ Deno.serve(async (req) => {
 
     const booking = bookingData as unknown as BookingData;
 
+    // Authorization: caller must be the passenger or the driver
+    const isPassenger = booking.passenger_id === userId;
+    const isDriver = booking.ride?.driver_id === userId;
+
+    if (!isPassenger && !isDriver) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     const passengerName = booking.passenger?.full_name || "Passenger";
     const passengerPhone = booking.passenger?.phone_number;
     const driverName = booking.ride?.driver?.full_name || "Driver";
     const driverPhone = booking.ride?.driver?.phone_number;
     const driverId = booking.ride?.driver_id;
-    const seatPrice = booking.seat_type === "front" 
+    const seatPrice = booking.seat_type === "front"
       ? (booking.ride?.front_seat_price || 0)
       : (booking.ride?.back_seat_price || 0);
     const totalPrice = seatPrice * booking.seats_booked;
 
     const results: Array<{ recipient: string; success: boolean; error?: string; messageId?: string }> = [];
 
-    // Handle cancellation notifications
-    if (notificationType === 'cancellation') {
+    if (notificationType === "cancellation") {
       const reason = cancellationReason || booking.cancellation_reason || "No reason provided";
       
       const driverCancellationMessage = `
@@ -177,7 +213,6 @@ Deno.serve(async (req) => {
 
 📋 *Booking ID:* ${booking.id.slice(0, 8).toUpperCase()}
 👤 *Passenger:* ${passengerName}
-📱 *Contact:* ${passengerPhone || "Not provided"}
 
 📍 *Route:*
 From: ${booking.ride?.origin || "N/A"}
@@ -194,13 +229,11 @@ ${reason}
 The seat(s) are now available for other passengers.
       `.trim();
 
-      // Notify driver via WhatsApp
       if (driverPhone) {
         const driverResult = await sendWhatsAppMessage(driverPhone, driverCancellationMessage);
         results.push({ recipient: "driver", ...driverResult });
       }
 
-      // Create in-app notification for driver
       if (driverId) {
         await createNotification(
           supabase,
@@ -208,19 +241,16 @@ The seat(s) are now available for other passengers.
           "booking_cancelled",
           "Booking Cancelled",
           `${passengerName} cancelled their booking for ${booking.ride?.origin} → ${booking.ride?.destination}. Reason: ${reason}`,
-          bookingId,
-          booking.ride ? bookingId : undefined
+          bookingId
         );
       }
 
-      // Notify admin
       if (adminPhone) {
         const adminMessage = `
 📊 *Admin Alert - Booking Cancelled*
 
 📋 *ID:* ${booking.id.slice(0, 8).toUpperCase()}
-👤 *Passenger:* ${passengerName} (${passengerPhone || "No phone"})
-🚘 *Driver:* ${driverName} (${driverPhone || "No phone"})
+👤 *Passenger:* ${passengerName}
 📍 *Route:* ${booking.ride?.origin || "N/A"} → ${booking.ride?.destination || "N/A"}
 💺 *Seats:* ${booking.seats_booked} ${booking.seat_type}
 ❌ *Reason:* ${reason}
@@ -229,9 +259,7 @@ The seat(s) are now available for other passengers.
         const adminResult = await sendWhatsAppMessage(adminPhone, adminMessage);
         results.push({ recipient: "admin", ...adminResult });
       }
-
     } else {
-      // Handle new booking notifications (original logic)
       const bookingDetails = `
 🚗 *SwatPool Booking Confirmation*
 
@@ -254,20 +282,17 @@ Status: ${booking.status.toUpperCase()}
 Thank you for using SwatPool!
       `.trim();
 
-      // Send to passenger
       if (passengerPhone) {
         const passengerResult = await sendWhatsAppMessage(passengerPhone, bookingDetails);
         results.push({ recipient: "passenger", ...passengerResult });
       }
 
-      // Send to driver
       if (driverPhone) {
         const driverMessage = `
 🔔 *New Booking Request - SwatPool*
 
 📋 *Booking ID:* ${booking.id.slice(0, 8).toUpperCase()}
 👤 *Passenger:* ${passengerName}
-📱 *Contact:* ${passengerPhone || "Not provided"}
 
 📍 *Route:*
 From: ${booking.ride?.origin || "N/A"}
@@ -286,7 +311,6 @@ Please confirm or reject this booking in the app.
         results.push({ recipient: "driver", ...driverResult });
       }
 
-      // Create in-app notification for driver
       if (driverId) {
         await createNotification(
           supabase,
@@ -298,19 +322,16 @@ Please confirm or reject this booking in the app.
         );
       }
 
-      // Send to admin
       if (adminPhone) {
         const adminMessage = `
 📊 *Admin Alert - New Booking*
 
 📋 *ID:* ${booking.id.slice(0, 8).toUpperCase()}
-👤 *Passenger:* ${passengerName} (${passengerPhone || "No phone"})
-🚘 *Driver:* ${driverName} (${driverPhone || "No phone"})
+👤 *Passenger:* ${passengerName}
 📍 *Route:* ${booking.ride?.origin || "N/A"} → ${booking.ride?.destination || "N/A"}
 📅 *Date:* ${booking.ride?.departure_date || "N/A"} at ${booking.ride?.departure_time || "N/A"}
 💺 *Seats:* ${booking.seats_booked} ${booking.seat_type}
 💰 *Amount:* ₨${totalPrice}
-⏱️ *Booked at:* ${new Date(booking.created_at).toLocaleString()}
         `.trim();
 
         const adminResult = await sendWhatsAppMessage(adminPhone, adminMessage);
@@ -325,9 +346,9 @@ Please confirm or reject this booking in the app.
 
   } catch (err) {
     const error = err as Error;
-    console.error("Error processing notification:", error);
+    console.error("Error processing notification:", error.message);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: "Internal server error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }

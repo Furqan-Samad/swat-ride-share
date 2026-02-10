@@ -321,15 +321,19 @@ export const useCreateBooking = () => {
 
       // Send WhatsApp notification (fire and forget)
       try {
-        const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID || 'bpoynxqqumbsstfgrjqg';
-        fetch(`https://${projectId}.supabase.co/functions/v1/send-whatsapp-notification`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-          },
-          body: JSON.stringify({ bookingId: data.id }),
-        }).catch(console.error);
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token;
+        if (token) {
+          const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID || 'bpoynxqqumbsstfgrjqg';
+          fetch(`https://${projectId}.supabase.co/functions/v1/send-whatsapp-notification`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`,
+            },
+            body: JSON.stringify({ bookingId: data.id }),
+          }).catch(console.error);
+        }
       } catch (notifError) {
         console.error('Failed to send WhatsApp notification:', notifError);
       }
