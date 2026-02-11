@@ -53,7 +53,7 @@ export const useRidesWithDriver = (from?: string, to?: string) => {
       if (driverIds.length === 0) return [];
 
       const { data: profiles } = await supabase
-        .from("profiles")
+        .from("driver_public_profile")
         .select("id, full_name, avatar_url")
         .in("id", driverIds);
 
@@ -84,8 +84,8 @@ export const useRideWithDriver = (id: string) => {
 
       // Fetch driver profile
       const { data: profile } = await supabase
-        .from("profiles")
-        .select("full_name, avatar_url, phone_number")
+        .from("driver_public_profile")
+        .select("full_name, avatar_url")
         .eq("id", ride.driver_id)
         .maybeSingle();
 
