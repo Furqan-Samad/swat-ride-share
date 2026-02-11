@@ -126,6 +126,78 @@ export type Database = {
           },
         ]
       }
+      payments: {
+        Row: {
+          amount: number
+          booking_id: string
+          created_at: string
+          driver_id: string
+          id: string
+          passenger_id: string
+          payment_method: string
+          payment_status: string
+          rejection_reason: string | null
+          ride_id: string
+          screenshot_url: string | null
+          transaction_reference: string | null
+          updated_at: string
+          verified_at: string | null
+          verified_by: string | null
+          wallet_name: string | null
+        }
+        Insert: {
+          amount: number
+          booking_id: string
+          created_at?: string
+          driver_id: string
+          id?: string
+          passenger_id: string
+          payment_method: string
+          payment_status?: string
+          rejection_reason?: string | null
+          ride_id: string
+          screenshot_url?: string | null
+          transaction_reference?: string | null
+          updated_at?: string
+          verified_at?: string | null
+          verified_by?: string | null
+          wallet_name?: string | null
+        }
+        Update: {
+          amount?: number
+          booking_id?: string
+          created_at?: string
+          driver_id?: string
+          id?: string
+          passenger_id?: string
+          payment_method?: string
+          payment_status?: string
+          rejection_reason?: string | null
+          ride_id?: string
+          screenshot_url?: string | null
+          transaction_reference?: string | null
+          updated_at?: string
+          verified_at?: string | null
+          verified_by?: string | null
+          wallet_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payments_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: true
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_ride_id_fkey"
+            columns: ["ride_id"]
+            isOneToOne: false
+            referencedRelation: "rides"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null

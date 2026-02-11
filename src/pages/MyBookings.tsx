@@ -12,6 +12,7 @@ import { useBookingReview } from "@/hooks/useReviews";
 import { useCancelBooking } from "@/hooks/usePassengerCancellation";
 import ReviewForm from "@/components/ReviewForm";
 import { CancelBookingDialog } from "@/components/CancelBookingDialog";
+import PaymentStatusBadge from "@/components/PaymentStatusBadge";
 import { EmergencyContactButton } from "@/components/EmergencyContactButton";
 import { WhatsAppContactButton } from "@/components/WhatsAppContactButton";
 import { LiveLocationMap } from "@/components/LiveLocationMap";
@@ -89,6 +90,7 @@ const BookingCard = ({ booking }: { booking: Booking }) => {
               <Badge variant={getStatusColor(booking.status)}>
                 {booking.status}
               </Badge>
+              <PaymentStatusBadge bookingId={booking.id} />
               <span className="text-sm text-muted-foreground">
                 {booking.seats_booked} {seatTypeLabel} seat(s)
               </span>
