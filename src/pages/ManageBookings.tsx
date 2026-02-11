@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Users, Calendar, MapPin, Loader2, Check, X, Phone, MessageCircle, Navigation } from "lucide-react";
+import { Users, Calendar, MapPin, Loader2, Check, X, Phone, MessageCircle, Navigation, DollarSign } from "lucide-react";
 import Header from "@/components/Header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -12,6 +12,9 @@ import { useDriverBookingRequests, useUpdateBookingStatus } from "@/hooks/useBoo
 import { WhatsAppContactButton } from "@/components/WhatsAppContactButton";
 import { LiveLocationMap } from "@/components/LiveLocationMap";
 import { useRealtimeBookings } from "@/hooks/useRealtimeBookings";
+import PaymentVerificationCard from "@/components/PaymentVerificationCard";
+import PaymentStatusBadge from "@/components/PaymentStatusBadge";
+import { useDriverPayments } from "@/hooks/usePayments";
 import { format } from "date-fns";
 
 // Individual booking card component with live location toggle
@@ -51,6 +54,7 @@ const BookingCard = ({ booking, formatDate, formatTime, getStatusColor, updateSt
             <Badge variant={getStatusColor(booking.status)}>
               {booking.status}
             </Badge>
+            <PaymentStatusBadge bookingId={booking.id} />
             
             {canShowLiveLocation && (
               <Button
@@ -103,6 +107,7 @@ const ManageBookings = () => {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
   const { data: bookings, isLoading } = useDriverBookingRequests();
+  const { data: payments } = useDriverPayments();
   const updateStatus = useUpdateBookingStatus();
 
   // Enable real-time updates for booking changes
@@ -241,6 +246,23 @@ const ManageBookings = () => {
                   updateStatus={updateStatus}
                 />
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* Payment Verification Section */}
+        {payments && payments.filter(p => p.payment_status === 'pending_verification' || p.payment_status === 'cash_pending').length > 0 && (
+          <div className="mb-8">
+            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+              <DollarSign className="h-5 w-5 text-primary" />
+              Pending Payments
+            </h2>
+            <div className="grid gap-4 md:grid-cols-2">
+              {payments
+                .filter(p => p.payment_status === 'pending_verification' || p.payment_status === 'cash_pending')
+                .map((payment) => (
+                  <PaymentVerificationCard key={payment.id} payment={payment} />
+                ))}
             </div>
           </div>
         )}

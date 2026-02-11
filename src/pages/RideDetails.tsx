@@ -5,6 +5,8 @@ import Header from "@/components/Header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import PaymentMethodSelector from "@/components/PaymentMethodSelector";
 import { useRideWithDriver } from "@/hooks/useRideWithDriver";
 import { useCreateBooking } from "@/hooks/useRides";
 import { useAuth } from "@/hooks/useAuth";
@@ -27,6 +29,8 @@ const RideDetails = () => {
   const createBooking = useCreateBooking();
   const [seatsToBook, setSeatsToBook] = useState(1);
   const [seatType, setSeatType] = useState<'front' | 'back'>('back');
+  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  const [bookingResult, setBookingResult] = useState<{ id: string } | null>(null);
 
   // Enable real-time updates for seat availability
   useRealtimeRides();
@@ -74,8 +78,9 @@ const RideDetails = () => {
 
     if (!id) return;
 
-    await createBooking.mutateAsync({ rideId: id, seats: seatsToBook, seatType });
-    navigate("/my-bookings");
+    const result = await createBooking.mutateAsync({ rideId: id, seats: seatsToBook, seatType });
+    setBookingResult(result);
+    setPaymentDialogOpen(true);
   };
 
   const frontSeatsAvailable = ride?.front_seats_available ?? 1;
@@ -377,6 +382,29 @@ const RideDetails = () => {
           </div>
         </div>
       </div>
+
+      {/* Payment Dialog */}
+      <Dialog open={paymentDialogOpen} onOpenChange={setPaymentDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Complete Payment</DialogTitle>
+          </DialogHeader>
+          {bookingResult && ride && (
+            <PaymentMethodSelector
+              bookingId={bookingResult.id}
+              rideId={ride.id}
+              driverId={ride.driver_id}
+              amount={currentPrice * seatsToBook}
+              onSuccess={() => {
+                setTimeout(() => {
+                  setPaymentDialogOpen(false);
+                  navigate("/my-bookings");
+                }, 2000);
+              }}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
