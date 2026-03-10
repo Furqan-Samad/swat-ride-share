@@ -200,5 +200,7 @@ declare namespace google.maps {
     OK = 'OK',
     ZERO_RESULTS = 'ZERO_RESULTS',
     ERROR = 'ERROR',
+    REQUEST_DENIED = 'REQUEST_DENIED',
+    OVER_QUERY_LIMIT = 'OVER_QUERY_LIMIT',
   }
 }
