@@ -112,7 +112,7 @@ declare namespace google.maps {
     position?: LatLng | LatLngLiteral;
     map?: Map;
     title?: string;
-    icon?: string | Symbol;
+    icon?: string | Icon | Symbol;
     label?: string;
   }
 
