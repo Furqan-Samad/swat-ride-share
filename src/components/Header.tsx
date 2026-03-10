@@ -173,6 +173,9 @@ const Header = () => {
                   <DropdownMenuItem asChild>
                     <Link to="/manage-bookings">Manage Requests</Link>
                   </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/driver-earnings">Earnings</Link>
+                  </DropdownMenuItem>
                 </>
               )}
             </DropdownMenuContent>
