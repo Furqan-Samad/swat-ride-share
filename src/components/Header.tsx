@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Car, LogOut, User, Menu, Ticket, CarFront, Settings, Users, Bell } from "lucide-react";
+import { Car, LogOut, User, Menu, Ticket, CarFront, Settings, Users, Bell, DollarSign } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "./ui/button";
 import { useAuth } from "@/hooks/useAuth";
