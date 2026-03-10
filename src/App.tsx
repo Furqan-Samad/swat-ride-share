@@ -19,6 +19,7 @@ import MyBookings from "./pages/MyBookings";
 import Profile from "./pages/Profile";
 import ManageBookings from "./pages/ManageBookings";
 import Notifications from "./pages/Notifications";
+import DriverEarnings from "./pages/DriverEarnings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -45,6 +46,7 @@ const App = () => (
             <Route path="/my-bookings" element={<MyBookings />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/manage-bookings" element={<ManageBookings />} />
+            <Route path="/driver-earnings" element={<DriverEarnings />} />
             <Route path="/notifications" element={<Notifications />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />

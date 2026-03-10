@@ -511,6 +511,10 @@ export type Database = {
       }
     }
     Functions: {
+      cancel_booking: {
+        Args: { _booking_id: string; _reason?: string }
+        Returns: undefined
+      }
       create_notification: {
         Args: {
           _message: string
@@ -521,6 +525,32 @@ export type Database = {
           _user_id: string
         }
         Returns: undefined
+      }
+      get_driver_profile_for_booking: {
+        Args: { _driver_id: string }
+        Returns: {
+          avatar_url: string
+          full_name: string
+          id: string
+          is_driver: boolean
+          phone_number: string
+        }[]
+      }
+      update_payment_proof: {
+        Args: {
+          _payment_id: string
+          _screenshot_url?: string
+          _transaction_reference?: string
+        }
+        Returns: undefined
+      }
+      verify_payment: {
+        Args: {
+          _action: string
+          _payment_id: string
+          _rejection_reason?: string
+        }
+        Returns: string
       }
     }
     Enums: {

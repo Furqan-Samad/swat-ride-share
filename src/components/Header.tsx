@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Car, LogOut, User, Menu, Ticket, CarFront, Settings, Users, Bell } from "lucide-react";
+import { Car, LogOut, User, Menu, Ticket, CarFront, Settings, Users, Bell, DollarSign } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "./ui/button";
 import { useAuth } from "@/hooks/useAuth";
@@ -116,6 +116,12 @@ const Header = () => {
                     Manage Requests
                   </Link>
                 </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link to="/driver-earnings" className="flex items-center">
+                    <DollarSign className="mr-2 h-4 w-4" />
+                    Earnings
+                  </Link>
+                </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleSignOut} className="text-destructive focus:text-destructive">
                   <LogOut className="mr-2 h-4 w-4" />
@@ -166,6 +172,9 @@ const Header = () => {
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
                     <Link to="/manage-bookings">Manage Requests</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/driver-earnings">Earnings</Link>
                   </DropdownMenuItem>
                 </>
               )}

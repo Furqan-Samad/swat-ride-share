@@ -178,17 +178,13 @@ export const MapPreview = ({
             position: originLatLng,
             map,
             title: origin,
-            icon: {
-              url: "https://maps.google.com/mapfiles/ms/icons/green-dot.png",
-            },
+            icon: "https://maps.google.com/mapfiles/ms/icons/green-dot.png",
           });
           new google.maps.Marker({
             position: destLatLng,
             map,
             title: destination,
-            icon: {
-              url: "https://maps.google.com/mapfiles/ms/icons/red-dot.png",
-            },
+            icon: "https://maps.google.com/mapfiles/ms/icons/red-dot.png",
           });
 
           const bounds = new google.maps.LatLngBounds();
