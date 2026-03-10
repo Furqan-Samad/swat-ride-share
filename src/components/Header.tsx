@@ -116,6 +116,12 @@ const Header = () => {
                     Manage Requests
                   </Link>
                 </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link to="/driver-earnings" className="flex items-center">
+                    <DollarSign className="mr-2 h-4 w-4" />
+                    Earnings
+                  </Link>
+                </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleSignOut} className="text-destructive focus:text-destructive">
                   <LogOut className="mr-2 h-4 w-4" />
