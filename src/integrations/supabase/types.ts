@@ -511,7 +511,17 @@ export type Database = {
       }
     }
     Functions: {
-      [_ in never]: never
+      create_notification: {
+        Args: {
+          _message: string
+          _related_booking_id?: string
+          _related_ride_id?: string
+          _title: string
+          _type: string
+          _user_id: string
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never
