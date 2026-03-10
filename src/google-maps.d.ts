@@ -123,6 +123,21 @@ declare namespace google.maps {
     fillOpacity?: number;
     strokeColor?: string;
     strokeWeight?: number;
+    url?: string;
+  }
+
+  interface Icon {
+    url: string;
+    scaledSize?: Size;
+    anchor?: Point;
+  }
+
+  class Size {
+    constructor(width: number, height: number);
+  }
+
+  class Point {
+    constructor(x: number, y: number);
   }
 
   enum SymbolPath {
