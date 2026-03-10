@@ -230,13 +230,13 @@ export const useCollectCash = () => {
 
       if (error) throw error;
 
-      await supabase.from("notifications").insert({
-        user_id: data.passenger_id,
-        type: 'payment_confirmed',
-        title: 'Cash Payment Collected',
-        message: `Your cash payment of ₨${data.amount} has been collected by the driver.`,
-        related_booking_id: data.booking_id,
-        related_ride_id: data.ride_id,
+      await supabase.rpc("create_notification", {
+        _user_id: data.passenger_id,
+        _type: 'payment_confirmed',
+        _title: 'Cash Payment Collected',
+        _message: `Your cash payment of ₨${data.amount} has been collected by the driver.`,
+        _related_booking_id: data.booking_id,
+        _related_ride_id: data.ride_id,
       });
 
       return data;
