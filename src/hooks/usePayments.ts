@@ -177,16 +177,16 @@ export const useVerifyPayment = () => {
 
       if (error) throw error;
 
-      // Create notification for passenger
-      await supabase.from("notifications").insert({
-        user_id: data.passenger_id,
-        type: action === 'approve' ? 'payment_confirmed' : 'payment_rejected',
-        title: action === 'approve' ? 'Payment Confirmed' : 'Payment Rejected',
-        message: action === 'approve'
+      // Create notification for passenger using secure function
+      await supabase.rpc("create_notification", {
+        _user_id: data.passenger_id,
+        _type: action === 'approve' ? 'payment_confirmed' : 'payment_rejected',
+        _title: action === 'approve' ? 'Payment Confirmed' : 'Payment Rejected',
+        _message: action === 'approve'
           ? `Your payment of ₨${data.amount} has been verified.`
           : `Your payment was rejected. ${rejectionReason || 'Please resubmit.'}`,
-        related_booking_id: data.booking_id,
-        related_ride_id: data.ride_id,
+        _related_booking_id: data.booking_id,
+        _related_ride_id: data.ride_id,
       });
 
       return data;
