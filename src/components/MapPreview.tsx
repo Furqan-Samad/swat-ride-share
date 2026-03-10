@@ -178,9 +178,7 @@ export const MapPreview = ({
             position: originLatLng,
             map,
             title: origin,
-            icon: {
-              url: "https://maps.google.com/mapfiles/ms/icons/green-dot.png",
-            },
+            icon: "https://maps.google.com/mapfiles/ms/icons/green-dot.png",
           });
           new google.maps.Marker({
             position: destLatLng,
