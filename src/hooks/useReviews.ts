@@ -43,9 +43,7 @@ export const useDriverReviews = (driverId: string) => {
       if (passengerIds.length === 0) return [];
 
       const { data: profiles } = await supabase
-        .from("profiles")
-        .select("id, full_name, avatar_url")
-        .in("id", passengerIds);
+        .rpc("get_public_profiles", { _ids: passengerIds });
 
       const profileMap = new Map(
         (profiles || []).map(p => [p.id, p])

@@ -147,24 +147,32 @@ export const useMyBookings = () => {
       // For bookings, fetch driver profiles - phone number ONLY for confirmed bookings
       const bookingsWithProfiles = await Promise.all(
         (bookingsData || []).map(async (booking) => {
-          if (booking.rides && ['confirmed', 'pending'].includes(booking.status)) {
-            // Always fetch both fields, but only expose phone for confirmed
-            const { data: profileData } = await supabase
-              .from("profiles")
-              .select("full_name, phone_number")
-              .eq("id", booking.rides.driver_id)
-              .maybeSingle();
-            
-            if (profileData) {
+          if (booking.rides && booking.status === 'confirmed') {
+            const { data: drv } = await supabase
+              .rpc("get_driver_profile_for_booking", { _driver_id: booking.rides.driver_id });
+            const profile = Array.isArray(drv) ? drv[0] : drv;
+            if (profile) {
               return {
                 ...booking,
                 rides: {
                   ...booking.rides,
                   profiles: {
-                    full_name: profileData.full_name,
-                    // Only include phone_number if booking is confirmed (security: prevent harvesting)
-                    phone_number: booking.status === 'confirmed' ? profileData.phone_number : null
+                    full_name: profile.full_name,
+                    phone_number: profile.phone_number,
                   }
+                }
+              };
+            }
+          } else if (booking.rides) {
+            const { data: pubArr } = await supabase
+              .rpc("get_public_profiles", { _ids: [booking.rides.driver_id] });
+            const pub = Array.isArray(pubArr) ? pubArr[0] : null;
+            if (pub) {
+              return {
+                ...booking,
+                rides: {
+                  ...booking.rides,
+                  profiles: { full_name: pub.full_name, phone_number: null }
                 }
               };
             }
