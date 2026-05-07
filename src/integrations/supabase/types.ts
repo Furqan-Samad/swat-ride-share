@@ -545,6 +545,15 @@ export type Database = {
           phone_number: string
         }[]
       }
+      get_public_profiles: {
+        Args: { _ids: string[] }
+        Returns: {
+          avatar_url: string
+          full_name: string
+          id: string
+          is_driver: boolean
+        }[]
+      }
       update_payment_proof: {
         Args: {
           _payment_id: string
