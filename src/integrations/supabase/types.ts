@@ -536,6 +536,15 @@ export type Database = {
           phone_number: string
         }[]
       }
+      get_my_ride_passenger_profiles: {
+        Args: { _passenger_ids: string[] }
+        Returns: {
+          avatar_url: string
+          full_name: string
+          id: string
+          phone_number: string
+        }[]
+      }
       get_passenger_profile_for_booking: {
         Args: { _passenger_id: string }
         Returns: {
