@@ -536,6 +536,15 @@ export type Database = {
           phone_number: string
         }[]
       }
+      get_passenger_profile_for_booking: {
+        Args: { _passenger_id: string }
+        Returns: {
+          avatar_url: string
+          full_name: string
+          id: string
+          phone_number: string
+        }[]
+      }
       update_payment_proof: {
         Args: {
           _payment_id: string
