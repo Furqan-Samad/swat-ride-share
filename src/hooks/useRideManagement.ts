@@ -218,9 +218,7 @@ export const useRideBookings = (rideId: string) => {
       const passengerIds = [...new Set(data?.map(b => b.passenger_id) || [])];
       if (passengerIds.length > 0) {
         const { data: profiles } = await supabase
-          .from("profiles")
-          .select("id, full_name, phone_number, avatar_url")
-          .in("id", passengerIds);
+          .rpc("get_my_ride_passenger_profiles", { _passenger_ids: passengerIds });
 
         const profileMap = new Map((profiles || []).map(p => [p.id, p]));
 
