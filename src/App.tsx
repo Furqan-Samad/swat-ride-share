@@ -20,6 +20,8 @@ import Profile from "./pages/Profile";
 import ManageBookings from "./pages/ManageBookings";
 import Notifications from "./pages/Notifications";
 import DriverEarnings from "./pages/DriverEarnings";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
