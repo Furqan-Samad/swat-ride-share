@@ -42,6 +42,8 @@ const App = () => (
             <Route path="/ride/:id" element={<RideDetails />} />
             <Route path="/post-ride" element={<PostRide />} />
             <Route path="/auth" element={<Auth />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/profile-setup" element={<ProfileSetup />} />
             <Route path="/vehicle-setup" element={<VehicleSetup />} />
             <Route path="/my-rides" element={<MyRides />} />
