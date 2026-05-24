@@ -142,6 +142,35 @@ const Auth = () => {
     navigate("/");
   };
 
+  const handleGoogleSignIn = async () => {
+    setLoading(true);
+    const result = await lovable.auth.signInWithOAuth("google", {
+      redirect_uri: window.location.origin,
+    });
+    setLoading(false);
+
+    if (result.error) {
+      toast({
+        title: "Google Sign In Failed",
+        description: result.error instanceof Error ? result.error.message : "Something went wrong",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (result.redirected) {
+      // Browser will redirect to Google — the OAuth flow handles the rest
+      return;
+    }
+
+    // Tokens received directly (no redirect needed)
+    toast({
+      title: "Welcome!",
+      description: "Signed in with Google successfully",
+    });
+    navigate("/");
+  };
+
   if (authLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
