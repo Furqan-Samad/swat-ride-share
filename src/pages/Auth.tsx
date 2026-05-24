@@ -177,6 +177,35 @@ const Auth = () => {
     navigate("/");
   };
 
+  const handleAppleSignIn = async () => {
+    setLoading(true);
+    const result = await lovable.auth.signInWithOAuth("apple", {
+      redirect_uri: window.location.origin,
+    });
+    setLoading(false);
+
+    if (result.error) {
+      toast({
+        title: "Apple Sign In Failed",
+        description: result.error instanceof Error ? result.error.message : "Something went wrong",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (result.redirected) {
+      // Browser will redirect to Apple — the OAuth flow handles the rest
+      return;
+    }
+
+    // Tokens received directly (no redirect needed)
+    toast({
+      title: "Welcome!",
+      description: "Signed in with Apple successfully",
+    });
+    navigate("/");
+  };
+
   if (authLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
