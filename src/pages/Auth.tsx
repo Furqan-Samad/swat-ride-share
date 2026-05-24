@@ -327,6 +327,23 @@ const Auth = () => {
                     </>
                   )}
                 </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="lg"
+                  className="w-full h-12 mt-2"
+                  onClick={handleAppleSignIn}
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                  ) : (
+                    <>
+                      <AppleIcon />
+                      Sign in with Apple
+                    </>
+                  )}
+                </Button>
               </>
             )}
             
